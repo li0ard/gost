@@ -1,6 +1,6 @@
 {
   "name": "@li0ard/gost",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "main": "index.js",
   "types": "index.d.ts",
   "type": "module",
@@ -9,7 +9,7 @@
     "./gost3410.js": "./gost3410/index.js",
     "./gost341194.js": "./gost341194/index.js",
     "./kuznyechik.js": "./kuznyechik/index.js",
-    "./magma.js": "./kuznyechik/magma.js",
+    "./magma.js": "./magma/index.js",
     "./modes.js": "./modes/index.js",
     "./streebog.js": "./streebog/index.js",
     "./hmac.js": "./hmac.js",
