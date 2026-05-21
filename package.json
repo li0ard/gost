@@ -1,6 +1,6 @@
 {
   "name": "@li0ard/gost",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "main": "index.js",
   "types": "index.d.ts",
   "type": "module",
@@ -43,7 +43,7 @@
     "@noble/curves": "^2.2.0",
     "@noble/hashes": "^2.2.0"
   },
-  "files": ["*.js", "*.d.ts"],
+  "files": ["**/*.js", "**/*.d.ts"],
   "publishConfig": {
     "access": "public"
   },
