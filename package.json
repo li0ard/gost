@@ -1,0 +1,51 @@
+{
+  "name": "@li0ard/gost",
+  "version": "0.1.0",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./gost3410.js": "./gost3410/index.js",
+    "./gost341194.js": "./gost341194/index.js",
+    "./kuznyechik.js": "./kuznyechik/index.js",
+    "./magma.js": "./kuznyechik/magma.js",
+    "./modes.js": "./modes/index.js",
+    "./streebog.js": "./streebog/index.js",
+    "./hmac.js": "./hmac.js",
+    "./kdf.js": "./kdf.js",
+    "./types.js": "./types.js"
+  },
+  "author": "li0ard",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/li0ard/gost.git"
+  },
+  "bugs": {
+    "url": "https://github.com/li0ard/gost/issues"
+  },
+  "homepage": "https://github.com/li0ard/gost#readme",
+  "funding": "https://li0ard.rest/donate",
+  "description": "GOST cryptography algorithms in pure TypeScript",
+  "license": "MIT",
+  "scripts": {
+    "build": "rm -rf dist/ && tsc --project tsconfig.build.json",
+    "docs": "typedoc --options .config/typedoc/config.cjs"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typedoc": "^0.28.19"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@noble/curves": "^2.2.0",
+    "@noble/hashes": "^2.2.0"
+  },
+  "files": ["dist"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": ["gost", "crypto", "magma", "kuznyechik", "streebog", "gost341194", "tc26"]
+}

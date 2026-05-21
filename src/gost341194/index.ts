@@ -1,0 +1,177 @@
+import { concatBytes, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { Magma } from "../magma/index.js";
+import { DSSZZI_UA_DKE_1, ID_GOSTR_3411_94_CRYPTOPRO_PARAM_SET } from "../magma/const.js";
+import { bytesToNumberBE, numberToBytesBE } from "@noble/curves/utils.js";
+import { xorBytes } from "../utils.js";
+
+const BLOCKSIZE = 32;
+const r = (1n << 256n) - 1n;
+
+const C2 = new Uint8Array(32);
+const C3 = new Uint8Array([
+    0xff, 0x00, 0xff, 0xff, 0x00, 0x00, 0x00, 0xff,
+    0xff, 0x00, 0x00, 0xff, 0x00, 0xff, 0xff, 0x00,
+    0x00, 0xff, 0x00, 0xff, 0x00, 0xff, 0x00, 0xff,
+    0xff, 0x00, 0xff, 0x00, 0xff, 0x00, 0xff, 0x00
+]);
+const C4 = new Uint8Array(32);
+
+const A = (x: TArg<Uint8Array>): TRet<Uint8Array> => {
+    const x2 = x.subarray(16, 24);
+    return concatBytes(xorBytes(x.subarray(24, 32), x2), x.subarray(0, 8), x.subarray(8, 16), x2);
+}
+
+const P = (x: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
+    x[0], x[8], x[16], x[24], x[1], x[9], x[17], x[25],
+    x[2], x[10], x[18], x[26], x[3], x[11], x[19], x[27],
+    x[4], x[12], x[20], x[28], x[5], x[13], x[21], x[29],
+    x[6], x[14], x[22], x[30], x[7], x[15], x[23], x[31]
+]);
+
+/*const chi = (Y: TArg<Uint8Array>): TRet<Uint8Array> => {
+    const byx = new Uint8Array(2);
+    byx[0] = Y[30] ^ Y[28] ^ Y[26] ^ Y[24] ^ Y[6] ^ Y[0];
+    byx[1] = Y[31] ^ Y[29] ^ Y[27] ^ Y[25] ^ Y[7] ^ Y[1];
+
+    const result = new Uint8Array(BLOCKSIZE);
+    result.set(byx, 0);
+    result.set(Y.slice(0,30), 2);
+
+    return result;
+}*/
+const chi = (Y: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
+    Y[30] ^ Y[28] ^ Y[26] ^ Y[24] ^ Y[6] ^ Y[0],
+    Y[31] ^ Y[29] ^ Y[27] ^ Y[25] ^ Y[7] ^ Y[1],
+    ...Y.subarray(0,30)
+]);
+
+const _step = (
+    hin: TArg<Uint8Array>,
+    m: TArg<Uint8Array>,
+    sbox: TArg<Uint8Array>[]
+): TRet<Uint8Array> => {
+    let u = hin;
+    let v = m;
+    let w = xorBytes(hin, m);
+    const k1 = new Magma(P(w).reverse(), sbox, true);
+
+    u = xorBytes(A(u), C2);
+    v = A(A(v));
+    w = xorBytes(u, v);
+    const k2 = new Magma(P(w).reverse(), sbox, true);
+
+    u = xorBytes(A(u), C3);
+    v = A(A(v));
+    w = xorBytes(u, v);
+    const k3 = new Magma(P(w).reverse(), sbox, true);
+
+    u = xorBytes(A(u), C4);
+    v = A(A(v));
+    w = xorBytes(u, v);
+    const k4 = new Magma(P(w).reverse(), sbox, true);
+
+    const s = concatBytes(
+        k4.encrypt(hin.slice(0,8).reverse()).reverse(),
+        k3.encrypt(hin.slice(8,16).reverse()).reverse(),
+        k2.encrypt(hin.slice(16,24).reverse()).reverse(),
+        k1.encrypt(hin.slice(24,32).reverse()).reverse(),
+    );
+
+    //let x = new Uint8Array(s);
+    //for(let i = 0; i < 12; i++) x = chi(x);
+    let x = chi(s); x = chi(x); x = chi(x); x = chi(x);
+    x = chi(x); x = chi(x); x = chi(x); x = chi(x);
+    x = chi(x); x = chi(x); x = chi(x); x = chi(x);
+
+    x = xorBytes(x, m);
+    x = chi(x);
+    x = xorBytes(hin, x);
+
+    //for(let i = 0; i < 61; i++) x = chi(x);
+    x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x);
+    x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x);
+    x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x);
+    x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x);
+    x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x);
+    x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x);
+    x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x);
+    x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x);
+    x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x);
+    x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x);
+    x = chi(x);
+
+    return x;
+}
+
+/** GOST R 34.11-94 hash function */
+export class Gost341194 implements Hash<Gost341194> {
+    public readonly blockLen: number = BLOCKSIZE;
+    public readonly outputLen = 32;
+    public readonly canXOF = false;
+
+    /** GOST R 34.11-94 hash function */
+    constructor(
+        private data: TArg<Uint8Array> = new Uint8Array(),
+        private sbox: TArg<Uint8Array>[] = ID_GOSTR_3411_94_CRYPTOPRO_PARAM_SET
+    ) {}
+
+    /** Create hash instance */
+    public static create(): Gost341194 { return new Gost341194(); }
+
+    destroy() { this.data = new Uint8Array(); }
+
+    clone(): Gost341194 { return this._cloneInto(); }
+    _cloneInto(to?: Gost341194): Gost341194 {
+        to ||= new Gost341194();
+        to.data = new Uint8Array(this.data);
+        to.sbox = this.sbox;
+
+        return to;
+    }
+
+    update(data: TArg<Uint8Array>): this {
+        this.data = concatBytes(this.data, data);
+        return this;
+    }
+
+    digestInto(buf: TArg<Uint8Array>) {
+        let len = 0n;
+        let checksum = 0n;
+        const h = new Uint8Array(BLOCKSIZE);
+        const m = new Uint8Array(this.data);
+
+        for(let i = 0; i < m.length; i += BLOCKSIZE) {
+            let part: Uint8Array = m.slice(i, i + BLOCKSIZE).reverse();
+            len += BigInt(part.length) * 8n;
+
+            checksum = (checksum + bytesToNumberBE(part)) & r;
+            if(part.length < BLOCKSIZE)
+                part = numberToBytesBE(bytesToNumberBE(part), BLOCKSIZE);
+            h.set(_step(h, part, this.sbox));
+        }
+
+        h.set(_step(
+            _step(h, numberToBytesBE(len, BLOCKSIZE), this.sbox),
+            numberToBytesBE(checksum, BLOCKSIZE),
+            this.sbox
+        ));
+        buf.set(h.reverse());
+        this.destroy();
+    }
+
+    digest(): TRet<Uint8Array> { 
+        const buffer = new Uint8Array(this.outputLen);
+        this.digestInto(buffer);
+
+        return buffer;
+    }
+}
+
+/** GOST R 34.11-94 hash function */
+export const gost341194 = (
+    msg: TArg<Uint8Array>,
+    sbox?: TArg<Uint8Array>[]
+): TRet<Uint8Array> => new Gost341194(msg, sbox).digest();
+/** DSTU GOST 34.311-95 */
+export const gost3431195 = (msg: TArg<Uint8Array>): TRet<Uint8Array> =>
+    gost341194(msg, DSSZZI_UA_DKE_1);
