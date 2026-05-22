@@ -78,8 +78,8 @@ export const verify = (
 
     if(signature.length != size * 2) throw new Error("Invalid signature");
 
-    const r = bytesToNumberBE(signature.slice(0, size));
-    const s = bytesToNumberBE(signature.slice(size));
+    const r = bytesToNumberBE(signature.subarray(0, size));
+    const s = bytesToNumberBE(signature.subarray(size));
 
     if(r <= 0 || r >= parameters.n || s <= 0 || s >= parameters.n) return false;
     let e = Fn.fromBytes(digest);

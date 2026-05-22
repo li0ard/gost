@@ -4,8 +4,6 @@ import { ID_GOST_28147_89_CRYPTO_PRO_A_PARAM_SET } from "../magma/const.js";
 import { cfb } from "./cfb.js";
 import type { Cipher } from "../types.js";
 import { ctr } from "./ctr.js";
-import { hexToBytes } from "@noble/hashes/utils.js";
-import { ecb } from "./ecb.js";
 
 export const cp_kek_diversify = (
     kek: TArg<Uint8Array>,
@@ -16,14 +14,13 @@ export const cp_kek_diversify = (
     for (let i = 0; i < 8; i++) {
         let s1 = 0, s2 = 0;
         for (let j = 0; j < 8; j++) {
-            const k = Number(bytesToNumberLE(out.subarray(j*4, j*4+4))); //((out[j * 4]) | (out[j * 4 + 1] << 8) | (out[j * 4 + 2] << 16) | (out[j * 4 + 3] << 24)) >>> 0;
+            const k = Number(bytesToNumberLE(out.subarray(j*4, j*4+4)));
             if ((ukm[i] >> j) & 1) s1 += k;
             else s2 += k;
         }
 
         const iv = concatBytes(numberToBytesLE(s1 >>> 0, 4), numberToBytesLE(s2 >>> 0, 4));
-        const cipher = new Magma(out, sbox, true);
-        out = cfb(cipher, iv).encrypt(out);
+        out = cfb(new Magma(out, sbox, true), iv).encrypt(out);
     }
 
     return out as TRet<Uint8Array>;
