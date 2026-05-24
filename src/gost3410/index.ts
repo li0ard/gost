@@ -1,5 +1,5 @@
 import { bytesToNumberBE, concatBytes, numberToBytesBE, randomBytes, type TArg, type TRet } from "@noble/curves/utils.js";
-import { type GostCurveParameters } from "./const.js";
+import { CURVES, type GostCurveParameters } from "./const.js";
 import { mod } from "@noble/curves/abstract/modular.js";
 import { weierstrass } from "@noble/curves/abstract/weierstrass.js";
 
@@ -94,6 +94,18 @@ export const verify = (
         Q = curve.fromBytes(pub).multiply(z2).negate();
     } catch { return false; }
     return Fn.create(P.add(Q).x) === r;
+}
+
+/** Swap `r` and `s` in signature */
+export const swapSignature = (curve: GostCurveParameters, signature: TArg<Uint8Array>): TRet<Uint8Array> => concatBytes(
+    signature.subarray(curve.length),
+    signature.subarray(0, curve.length),
+);
+
+/** Get curve parameters by OID */
+export const getCurveByOid = (oid: string): GostCurveParameters | undefined => {
+    for (const [_, params] of Object.entries(CURVES))
+        if (params.oids?.includes(oid)) return params;
 }
 
 export * from "./const.js";
