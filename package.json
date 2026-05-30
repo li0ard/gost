@@ -1,6 +1,6 @@
 {
   "name": "@li0ard/gost",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "main": "index.js",
   "types": "index.d.ts",
   "type": "module",
@@ -11,6 +11,7 @@
     "./kuznyechik.js": "./kuznyechik/index.js",
     "./magma.js": "./magma/index.js",
     "./modes.js": "./modes/index.js",
+    "./oids.js": "./oids/index.js",
     "./streebog.js": "./streebog/index.js",
     "./hmac.js": "./hmac.js",
     "./kdf.js": "./kdf.js",
@@ -33,6 +34,8 @@
     "docs": "typedoc --options .config/typedoc/config.cjs"
   },
   "devDependencies": {
+    "@peculiar/asn1-schema": "^2.7.0",
+    "@peculiar/asn1-x509": "^2.7.0",
     "@types/bun": "latest",
     "typedoc": "^0.28.19"
   },

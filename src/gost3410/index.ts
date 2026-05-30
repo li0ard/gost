@@ -20,7 +20,7 @@ export const getPublicKey = (
  * @param prv Private key
  * @param digest Digest to sign
  * @param rand Optional. Predefined random data for `r` and `k` generation
- * @returns {TRet<Uint8Array>} Concated `r` and `s`
+ * @returns {TRet<Uint8Array>} Concated `r` and `s` (in BE order)
  */
 export const sign = (
     parameters: GostCurveParameters,
@@ -31,10 +31,10 @@ export const sign = (
     const size = parameters.length;
     const curve = weierstrass(parameters);
     const Fn = curve.Fn;
-    let e = Fn.fromBytes(digest);
+    let e = mod(bytesToNumberBE(digest), Fn.ORDER); //Fn.fromBytes(digest);
     if(e === 0n) e = 1n;
 
-    const prvNum = Fn.fromBytes(prv);
+    const prvNum = mod(bytesToNumberBE(prv), Fn.ORDER); //Fn.fromBytes(prv);
     while (true) {
         rand ||= randomBytes(size)
         const k = mod(bytesToNumberBE(rand), parameters.n);
@@ -64,7 +64,7 @@ export const sign = (
  * @param parameters Curve parameters
  * @param pub Public key
  * @param digest Digest to verify
- * @param signature Signature (Concated `r` and `s`)
+ * @param signature Signature (Concated `r` and `s`) (in BE order)
  */
 export const verify = (
     parameters: GostCurveParameters,
@@ -82,7 +82,7 @@ export const verify = (
     const s = bytesToNumberBE(signature.subarray(size));
 
     if(r <= 0 || r >= parameters.n || s <= 0 || s >= parameters.n) return false;
-    let e = Fn.fromBytes(digest);
+    let e = mod(bytesToNumberBE(digest), Fn.ORDER); //Fn.fromBytes(digest);
     if(e === 0n) e = 1n;
 
     const v = Fn.inv(e);
@@ -97,16 +97,10 @@ export const verify = (
 }
 
 /** Swap `r` and `s` in signature */
-export const swapSignature = (curve: GostCurveParameters, signature: TArg<Uint8Array>): TRet<Uint8Array> => concatBytes(
-    signature.subarray(curve.length),
-    signature.subarray(0, curve.length),
+export const swapPoint = (curve: GostCurveParameters, point: TArg<Uint8Array>): TRet<Uint8Array> => concatBytes(
+    point.subarray(curve.length),
+    point.subarray(0, curve.length),
 );
-
-/** Get curve parameters by OID */
-export const getCurveByOid = (oid: string): GostCurveParameters | undefined => {
-    for (const [_, params] of Object.entries(CURVES))
-        if (params.oids?.includes(oid)) return params;
-}
 
 export * from "./const.js";
 export * from "./vko.js";

@@ -1,5 +1,7 @@
 import type { TArg, TRet } from "@noble/hashes/utils.js";
 
+export type HashFunctionWrapper = (msg: TArg<Uint8Array>) => TRet<Uint8Array>;
+
 /** Cipher core */
 export type Cipher = {
     /** Block size */

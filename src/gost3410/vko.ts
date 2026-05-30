@@ -10,8 +10,8 @@ import { bytesToNumberBE, concatBytes, numberToBytesLE, type TArg, type TRet } f
  * @param parameters Curve parameters
  * @param prv Private key
  * @param pub Public key
- * @param ukm User keying material (aka salt)
- * @returns {TRet<Uint8Array>} Shared key
+ * @param ukm User keying material (aka salt, VKO-factor)
+ * @returns {TRet<Uint8Array>} Shared key (Not hashed)
  */
 export const kek = (
     parameters: GostCurveParameters,
@@ -31,7 +31,7 @@ export const kek = (
  * @param parameters Curve parameters
  * @param prv Private key
  * @param pub Public key
- * @param ukm User keying material (aka salt)
+ * @param ukm User keying material (aka salt, VKO-factor)
  * @returns {TRet<Uint8Array>} Shared key
  */
 export const kek_34102001 = (
@@ -46,7 +46,7 @@ export const kek_34102001 = (
  * @param parameters Curve parameters
  * @param prv Private key
  * @param pub Public key
- * @param ukm User keying material (aka salt)
+ * @param ukm User keying material (aka salt, VKO-factor)
  * @returns {TRet<Uint8Array>} Shared key
  */
 export const kek_34102012256 = (
@@ -61,7 +61,7 @@ export const kek_34102012256 = (
  * @param parameters Curve parameters
  * @param prv Private key
  * @param pub Public key
- * @param ukm User keying material (aka salt)
+ * @param ukm User keying material (aka salt, VKO-factor)
  * @returns {TRet<Uint8Array>} Shared key
  */
 export const kek_34102012512 = (

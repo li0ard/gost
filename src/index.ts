@@ -3,6 +3,7 @@ export * from "./gost341194/index.js";
 export * from "./kuznyechik/index.js";
 export * from "./magma/index.js";
 export * from "./modes/index.js";
+export * from "./oids/index.js";
 export * from "./streebog/index.js";
 export * from "./hmac.js";
 export * from "./kdf.js";

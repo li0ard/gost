@@ -2,10 +2,7 @@ import type { AffinePoint } from "@noble/curves/abstract/curve.js";
 import type { GostCurveParameters } from "./const.js";
 import { Field } from "@noble/curves/abstract/modular.js";
 
-/**
- * Compute parameters (`s`, `t`) for conversion
- * @param curve Curve to use
- */
+/** Compute parameters (`s`, `t`) for conversion */
 export const computeST = (curve: GostCurveParameters): bigint[] => {
     if(!curve.e || !curve.d) throw new Error("No Twisted Edwards parameters");
     if(curve.st && curve.st.length != 0) return curve.st;
