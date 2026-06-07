@@ -4,19 +4,16 @@ import type { Cipher } from "../types.js";
 
 const BLOCKSIZE = 8, KEYSIZE = 32;
 
-const T = (value: number, sbox: TArg<Uint8Array>[]): number => {
-    //let result = 0;
-    //for (let i = 0; i < 8; i++) result |= sbox[i][(value >> (4 * i)) & 0x0f] << (4 * i);
-    let result = sbox[0][(value >> 0) & 0x0f] << 0;
-    result |= sbox[1][(value >> 4) & 0x0f] << 4;
-    result |= sbox[2][(value >> 8) & 0x0f] << 8;
-    result |= sbox[3][(value >> 12) & 0x0f] << 12;
-    result |= sbox[4][(value >> 16) & 0x0f] << 16;
-    result |= sbox[5][(value >> 20) & 0x0f] << 20;
-    result |= sbox[6][(value >> 24) & 0x0f] << 24;
-    result |= sbox[7][(value >> 28) & 0x0f] << 28;
-    return result >>> 0;
-}
+const T = (value: number, sbox: TArg<Uint8Array>[]): number => (
+    (sbox[0][(value >> 0) & 0x0f] << 0) |
+    (sbox[1][(value >> 4) & 0x0f] << 4) |
+    (sbox[2][(value >> 8) & 0x0f] << 8) |
+    (sbox[3][(value >> 12) & 0x0f] << 12) |
+    (sbox[4][(value >> 16) & 0x0f] << 16) |
+    (sbox[5][(value >> 20) & 0x0f] << 20) |
+    (sbox[6][(value >> 24) & 0x0f] << 24) |
+    (sbox[7][(value >> 28) & 0x0f] << 28)
+) >>> 0;
 
 const G = (a: number, k: number, sbox: TArg<Uint8Array>[]): number => {
     const substituted = T((a + k) >>> 0, sbox);
@@ -50,7 +47,8 @@ export class Magma implements Cipher {
             keyChunks.push(Number(bytesToNumberBE(this.key.subarray(j * 4, j * 4 + 4))));
 
         const roundKeys = new Array(sequence.length);
-        for (let i = 0; i < sequence.length; i++) roundKeys[i] = keyChunks[sequence[i]];
+        for (let i = 0; i < sequence.length; i++)
+            roundKeys[i] = keyChunks[sequence[i]];
 
         return roundKeys;
     }
@@ -90,7 +88,7 @@ export class Magma implements Cipher {
     }
 
     static reverseChunks(data: TArg<Uint8Array>): TRet<Uint8Array> {
-        const chunks: Uint8Array[] = [];
+        const chunks = [];
         for (let i = 0; i < data.length; i += BLOCKSIZE)
             chunks.push(copyBytes(data.subarray(i, i + BLOCKSIZE)).reverse());
 

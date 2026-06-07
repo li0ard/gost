@@ -3,176 +3,95 @@ import { ITER, L, PI, PI_REV } from "./const.js";
 import { xorBytes } from "../utils.js";
 import type { Cipher } from "../types.js";
 
-const BLOCKSIZE = 16, KEYSIZE = 32;
-
-const S = (input: TArg<Uint8Array>, pi = PI): TRet<Uint8Array> => {
-    const result = new Uint8Array(BLOCKSIZE);
-    //for(let i = 0; i < BLOCKSIZE; i++) result[i] = pi[input[i]];
-    result[0] = pi[input[0]];
-    result[1] = pi[input[1]];
-    result[2] = pi[input[2]];
-    result[3] = pi[input[3]];
-    result[4] = pi[input[4]];
-    result[5] = pi[input[5]];
-    result[6] = pi[input[6]];
-    result[7] = pi[input[7]];
-    result[8] = pi[input[8]];
-    result[9] = pi[input[9]];
-    result[10] = pi[input[10]];
-    result[11] = pi[input[11]];
-    result[12] = pi[input[12]];
-    result[13] = pi[input[13]];
-    result[14] = pi[input[14]];
-    result[15] = pi[input[15]];
-    
-    return result;
-}
-
 const gfMultiply = (a: number, b: number): number => {
-    let result = 0;
-    let high_bit: number;
-        
-    for(let i = 0; i < 8; i++) {
-        if((b & 0b00000001) === 0b00000001) result ^= a;
-        high_bit = a & 0b10000000;
+    let result = 0, high_bit: number;
+    for(let _ = 0; _ < 8; _++) {
+        if((b & 1) === 1) result ^= a;
+        high_bit = a & 0x80;
         a <<= 1;
-        if(high_bit == 0b10000000) a ^= 0b11000011;
+        if(high_bit == 0x80) a ^= 0xC3;
         b >>= 1;
     }
 
     return result & 0xFF;
 }
 
-const R = (input: TArg<Uint8Array>): TRet<Uint8Array> => {
-    const result = new Uint8Array(BLOCKSIZE);
-    result.set(input.slice(0, 15), 1);
-    result[0] = input[15];
+const S = (input: TArg<Uint8Array>, pi = PI): TRet<Uint8Array> => new Uint8Array([
+    pi[input[0]], pi[input[1]], pi[input[2]], pi[input[3]],
+    pi[input[4]], pi[input[5]], pi[input[6]], pi[input[7]],
+    pi[input[8]], pi[input[9]], pi[input[10]], pi[input[11]],
+    pi[input[12]], pi[input[13]], pi[input[14]], pi[input[15]]
+]);
 
-    //let temp = 0;
-    //for (let i = 0; i < BLOCKSIZE; i++) temp ^= gfMultiply(result[i], L[i]);
-    let temp = gfMultiply(result[0], L[0]);
-    temp ^= gfMultiply(result[1], L[1]);
-    temp ^= gfMultiply(result[2], L[2]);
-    temp ^= gfMultiply(result[3], L[3]);
-    temp ^= gfMultiply(result[4], L[4]);
-    temp ^= gfMultiply(result[5], L[5]);
-    temp ^= gfMultiply(result[6], L[6]);
-    temp ^= gfMultiply(result[7], L[7]);
-    temp ^= gfMultiply(result[8], L[8]);
-    temp ^= gfMultiply(result[9], L[9]);
-    temp ^= gfMultiply(result[10], L[10]);
-    temp ^= gfMultiply(result[11], L[11]);
-    temp ^= gfMultiply(result[12], L[12]);
-    temp ^= gfMultiply(result[13], L[13]);
-    temp ^= gfMultiply(result[14], L[14]);
-    temp ^= gfMultiply(result[15], L[15]);
+const R = (input: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
+    gfMultiply(input[15], L[0]) ^ gfMultiply(input[0], L[1]) ^
+    gfMultiply(input[1], L[2]) ^ gfMultiply(input[2], L[3]) ^
+    gfMultiply(input[3], L[4]) ^ gfMultiply(input[4], L[5]) ^
+    gfMultiply(input[5], L[6]) ^ gfMultiply(input[6], L[7]) ^
+    gfMultiply(input[7], L[8]) ^ gfMultiply(input[8], L[9]) ^
+    gfMultiply(input[9], L[10]) ^ gfMultiply(input[10], L[11]) ^
+    gfMultiply(input[11], L[12]) ^ gfMultiply(input[12], L[13]) ^
+    gfMultiply(input[13], L[14]) ^ gfMultiply(input[14], L[15]),
+    ...input.subarray(0, 15)
+]);
 
-    result[0] = temp;
+const Rr = (input: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
+    ...input.subarray(1, 16),
+    gfMultiply(input[0], L[0]) ^ gfMultiply(input[1], L[1]) ^
+    gfMultiply(input[2], L[2]) ^ gfMultiply(input[3], L[3]) ^
+    gfMultiply(input[4], L[4]) ^ gfMultiply(input[5], L[5]) ^
+    gfMultiply(input[6], L[6]) ^ gfMultiply(input[7], L[7]) ^
+    gfMultiply(input[8], L[8]) ^ gfMultiply(input[9], L[9]) ^
+    gfMultiply(input[10], L[10]) ^ gfMultiply(input[11], L[11]) ^
+    gfMultiply(input[12], L[12]) ^ gfMultiply(input[13], L[13]) ^
+    gfMultiply(input[14], L[14]) ^ gfMultiply(input[15], L[15])
+]);
 
-    return result;
-}
+// Call `R` 16x times
+const LL = (input: TArg<Uint8Array>): TRet<Uint8Array> => R(R(R(R(
+    R(R(R(R(
+        R(R(R(R(
+            R(R(R(R(input))))
+        ))))
+    ))))
+))));
 
-const Rr = (input: TArg<Uint8Array>): TRet<Uint8Array> => {
-    const result = new Uint8Array(BLOCKSIZE);
-    //let temp = 0;
-    //for (let i = 0; i < BLOCKSIZE; i++) temp ^= gfMultiply(input[i], L[i]);
-    let temp = gfMultiply(input[0], L[0]);
-    temp ^= gfMultiply(input[1], L[1]);
-    temp ^= gfMultiply(input[2], L[2]);
-    temp ^= gfMultiply(input[3], L[3]);
-    temp ^= gfMultiply(input[4], L[4]);
-    temp ^= gfMultiply(input[5], L[5]);
-    temp ^= gfMultiply(input[6], L[6]);
-    temp ^= gfMultiply(input[7], L[7]);
-    temp ^= gfMultiply(input[8], L[8]);
-    temp ^= gfMultiply(input[9], L[9]);
-    temp ^= gfMultiply(input[10], L[10]);
-    temp ^= gfMultiply(input[11], L[11]);
-    temp ^= gfMultiply(input[12], L[12]);
-    temp ^= gfMultiply(input[13], L[13]);
-    temp ^= gfMultiply(input[14], L[14]);
-    temp ^= gfMultiply(input[15], L[15]);
-
-    result.set(input.slice(1));
-    result[15] = temp;
-
-    return result;
-}
-
-const LL = (input: TArg<Uint8Array>): TRet<Uint8Array> => {
-    //let result = copyBytes(input);
-    //for(let i = 0; i < BLOCKSIZE; i++) result = R(result);
-    let result = R(copyBytes(input));
-    result = R(result);
-    result = R(result);
-    result = R(result);
-    result = R(result);
-    result = R(result);
-    result = R(result);
-    result = R(result);
-    result = R(result);
-    result = R(result);
-    result = R(result);
-    result = R(result);
-    result = R(result);
-    result = R(result);
-    result = R(result);
-    result = R(result);
-
-    return result;
-}
-
-const LLr = (input: TArg<Uint8Array>): TRet<Uint8Array> => {
-    //let result = copyBytes(input);
-    //for(let i = 0; i < BLOCKSIZE; i++) result = Rr(result);
-    let result = Rr(copyBytes(input));
-    result = Rr(result);
-    result = Rr(result);
-    result = Rr(result);
-    result = Rr(result);
-    result = Rr(result);
-    result = Rr(result);
-    result = Rr(result);
-    result = Rr(result);
-    result = Rr(result);
-    result = Rr(result);
-    result = Rr(result);
-    result = Rr(result);
-    result = Rr(result);
-    result = Rr(result);
-    result = Rr(result);
-
-    return result;
-}
+// Call `Rr` 16x times
+const LLr = (input: TArg<Uint8Array>): TRet<Uint8Array> => Rr(Rr(Rr(Rr(
+    Rr(Rr(Rr(Rr(
+        Rr(Rr(Rr(Rr(
+            Rr(Rr(Rr(Rr(input))))
+        ))))
+    ))))
+))));
 
 const LLS = (block: TArg<Uint8Array>): TRet<Uint8Array> => LL(S(block));
 const SLLr = (block: TArg<Uint8Array>): TRet<Uint8Array> => S(LLr(block), PI_REV);
 
 const F = (
-    in_key1: TArg<Uint8Array>,
-    in_key2: TArg<Uint8Array>,
-    iter_constant: TArg<Uint8Array>
-): TRet<Uint8Array> => xorBytes(LLS(xorBytes(in_key1, iter_constant)), in_key2);
+    inKey: TArg<Uint8Array>,
+    inKey2: TArg<Uint8Array>,
+    iter: TArg<Uint8Array>
+): TRet<Uint8Array> => xorBytes(LLS(xorBytes(inKey, iter)), inKey2);
 
 /** Kuznyechik (GOST R 34.12-2015) cipher */
 export class Kuznyechik implements Cipher {
-    public readonly keySize = KEYSIZE;
-    public readonly blockSize = BLOCKSIZE;
+    public readonly keySize = 32;
+    public readonly blockSize = 16;
 
     private roundKeys: Uint8Array[];
     /** Kuznyechik (GOST R 34.12-2015) cipher */
     constructor(key: TArg<Uint8Array>) {
         if (key.length !== this.keySize) throw new Error("Invalid key length");
 
-        const roundKeys: Uint8Array[] = Array(10).fill(null).map(() => new Uint8Array(this.blockSize));
+        const roundKeys = Array<Uint8Array>(10);
         roundKeys[0] = key.slice(0, this.blockSize);
         roundKeys[1] = key.slice(this.blockSize);
 
-        let temp1: Uint8Array = copyBytes(roundKeys[0]);
-        let temp2: Uint8Array = copyBytes(roundKeys[1]);
-        let temp3: Uint8Array = new Uint8Array(16);
-        let temp4: Uint8Array = new Uint8Array(16);
-
+        let temp1 = copyBytes(roundKeys[0]);
+        let temp2 = copyBytes(roundKeys[1]);
+        let temp3 = new Uint8Array(16);
+        let temp4 = new Uint8Array(16);
         for (let i = 0; i < 4; i++) {
             const baseIndex = i * 8;
         
@@ -222,8 +141,7 @@ export class Kuznyechik implements Cipher {
         currentBlock = LLS(xorBytes(this.roundKeys[7], currentBlock));
         currentBlock = LLS(xorBytes(this.roundKeys[8], currentBlock));
 
-        currentBlock = xorBytes(this.roundKeys[9], currentBlock);
-        return currentBlock;
+        return xorBytes(this.roundKeys[9], currentBlock);
     }
 
     decrypt(ciphertext: TArg<Uint8Array>): TRet<Uint8Array> {
@@ -241,8 +159,7 @@ export class Kuznyechik implements Cipher {
         currentBlock = xorBytes(this.roundKeys[3], SLLr(currentBlock));
         currentBlock = xorBytes(this.roundKeys[2], SLLr(currentBlock));
         currentBlock = xorBytes(this.roundKeys[1], SLLr(currentBlock));
-        currentBlock = xorBytes(this.roundKeys[0], SLLr(currentBlock));
 
-        return currentBlock;
+        return xorBytes(this.roundKeys[0], SLLr(currentBlock));
     }
 }

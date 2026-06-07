@@ -23,70 +23,40 @@ const add512 = (a: TArg<Uint8Array>, b: TArg<Uint8Array>): TRet<Uint8Array> => {
     return c;
 }
 
-const S = (input: TArg<Uint8Array>): TRet<Uint8Array> => {
-    const result = new Uint8Array(BLOCKSIZE);
-    //for (let i = 0; i < BLOCKSIZE; i++) result[i] = PI[input[i]];
-    result[0] = PI[input[0]]; result[1] = PI[input[1]]; result[2] = PI[input[2]];
-    result[3] = PI[input[3]]; result[4] = PI[input[4]]; result[5] = PI[input[5]];
-    result[6] = PI[input[6]]; result[7] = PI[input[7]]; result[8] = PI[input[8]];
-    result[9] = PI[input[9]]; result[10] = PI[input[10]]; result[11] = PI[input[11]];
-    result[12] = PI[input[12]]; result[13] = PI[input[13]]; result[14] = PI[input[14]];
-    result[15] = PI[input[15]]; result[16] = PI[input[16]]; result[17] = PI[input[17]];
-    result[18] = PI[input[18]]; result[19] = PI[input[19]]; result[20] = PI[input[20]];
-    result[21] = PI[input[21]]; result[22] = PI[input[22]]; result[23] = PI[input[23]];
-    result[24] = PI[input[24]]; result[25] = PI[input[25]]; result[26] = PI[input[26]];
-    result[27] = PI[input[27]]; result[28] = PI[input[28]]; result[29] = PI[input[29]];
-    result[30] = PI[input[30]]; result[31] = PI[input[31]]; result[32] = PI[input[32]];
-    result[33] = PI[input[33]]; result[34] = PI[input[34]]; result[35] = PI[input[35]];
-    result[36] = PI[input[36]]; result[37] = PI[input[37]]; result[38] = PI[input[38]];
-    result[39] = PI[input[39]]; result[40] = PI[input[40]]; result[41] = PI[input[41]];
-    result[42] = PI[input[42]]; result[43] = PI[input[43]]; result[44] = PI[input[44]];
-    result[45] = PI[input[45]]; result[46] = PI[input[46]]; result[47] = PI[input[47]];
-    result[48] = PI[input[48]]; result[49] = PI[input[49]]; result[50] = PI[input[50]];
-    result[51] = PI[input[51]]; result[52] = PI[input[52]]; result[53] = PI[input[53]];
-    result[54] = PI[input[54]]; result[55] = PI[input[55]]; result[56] = PI[input[56]];
-    result[57] = PI[input[57]]; result[58] = PI[input[58]]; result[59] = PI[input[59]];
-    result[60] = PI[input[60]]; result[61] = PI[input[61]]; result[62] = PI[input[62]];
-    result[63] = PI[input[63]];
+const S = (input: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
+    PI[input[0]], PI[input[1]], PI[input[2]], PI[input[3]], PI[input[4]], PI[input[5]],
+    PI[input[6]], PI[input[7]], PI[input[8]], PI[input[9]], PI[input[10]], PI[input[11]],
+    PI[input[12]], PI[input[13]], PI[input[14]], PI[input[15]], PI[input[16]], PI[input[17]],
+    PI[input[18]], PI[input[19]], PI[input[20]], PI[input[21]], PI[input[22]], PI[input[23]],
+    PI[input[24]], PI[input[25]], PI[input[26]], PI[input[27]], PI[input[28]], PI[input[29]],
+    PI[input[30]], PI[input[31]], PI[input[32]], PI[input[33]], PI[input[34]], PI[input[35]],
+    PI[input[36]], PI[input[37]], PI[input[38]], PI[input[39]], PI[input[40]], PI[input[41]],
+    PI[input[42]], PI[input[43]], PI[input[44]], PI[input[45]], PI[input[46]], PI[input[47]],
+    PI[input[48]], PI[input[49]], PI[input[50]], PI[input[51]], PI[input[52]], PI[input[53]],
+    PI[input[54]], PI[input[55]], PI[input[56]], PI[input[57]], PI[input[58]], PI[input[59]],
+    PI[input[60]], PI[input[61]], PI[input[62]], PI[input[63]]
+]);
 
-    return result;
-}
-
-const P = (input: TArg<Uint8Array>): TRet<Uint8Array> => {
-    const result = new Uint8Array(BLOCKSIZE);
-    //for (let i = 0; i < BLOCKSIZE; i++) result[i] = input[TAU[i]];
-    result[0] = input[TAU[0]]; result[1] = input[TAU[1]]; result[2] = input[TAU[2]];
-    result[3] = input[TAU[3]]; result[4] = input[TAU[4]]; result[5] = input[TAU[5]];
-    result[6] = input[TAU[6]]; result[7] = input[TAU[7]]; result[8] = input[TAU[8]];
-    result[9] = input[TAU[9]]; result[10] = input[TAU[10]]; result[11] = input[TAU[11]];
-    result[12] = input[TAU[12]]; result[13] = input[TAU[13]]; result[14] = input[TAU[14]];
-    result[15] = input[TAU[15]]; result[16] = input[TAU[16]]; result[17] = input[TAU[17]];
-    result[18] = input[TAU[18]]; result[19] = input[TAU[19]]; result[20] = input[TAU[20]];
-    result[21] = input[TAU[21]]; result[22] = input[TAU[22]]; result[23] = input[TAU[23]];
-    result[24] = input[TAU[24]]; result[25] = input[TAU[25]]; result[26] = input[TAU[26]];
-    result[27] = input[TAU[27]]; result[28] = input[TAU[28]]; result[29] = input[TAU[29]];
-    result[30] = input[TAU[30]]; result[31] = input[TAU[31]]; result[32] = input[TAU[32]];
-    result[33] = input[TAU[33]]; result[34] = input[TAU[34]]; result[35] = input[TAU[35]];
-    result[36] = input[TAU[36]]; result[37] = input[TAU[37]]; result[38] = input[TAU[38]];
-    result[39] = input[TAU[39]]; result[40] = input[TAU[40]]; result[41] = input[TAU[41]];
-    result[42] = input[TAU[42]]; result[43] = input[TAU[43]]; result[44] = input[TAU[44]];
-    result[45] = input[TAU[45]]; result[46] = input[TAU[46]]; result[47] = input[TAU[47]];
-    result[48] = input[TAU[48]]; result[49] = input[TAU[49]]; result[50] = input[TAU[50]];
-    result[51] = input[TAU[51]]; result[52] = input[TAU[52]]; result[53] = input[TAU[53]];
-    result[54] = input[TAU[54]]; result[55] = input[TAU[55]]; result[56] = input[TAU[56]];
-    result[57] = input[TAU[57]]; result[58] = input[TAU[58]]; result[59] = input[TAU[59]];
-    result[60] = input[TAU[60]]; result[61] = input[TAU[61]]; result[62] = input[TAU[62]];
-    result[63] = input[TAU[63]];
-
-    return result;
-}
+const P = (input: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
+    input[TAU[0]], input[TAU[1]], input[TAU[2]], input[TAU[3]], input[TAU[4]], input[TAU[5]],
+    input[TAU[6]], input[TAU[7]], input[TAU[8]], input[TAU[9]], input[TAU[10]], input[TAU[11]],
+    input[TAU[12]], input[TAU[13]], input[TAU[14]], input[TAU[15]], input[TAU[16]], input[TAU[17]],
+    input[TAU[18]], input[TAU[19]], input[TAU[20]], input[TAU[21]], input[TAU[22]], input[TAU[23]],
+    input[TAU[24]], input[TAU[25]], input[TAU[26]], input[TAU[27]], input[TAU[28]], input[TAU[29]],
+    input[TAU[30]], input[TAU[31]], input[TAU[32]], input[TAU[33]], input[TAU[34]], input[TAU[35]],
+    input[TAU[36]], input[TAU[37]], input[TAU[38]], input[TAU[39]], input[TAU[40]], input[TAU[41]],
+    input[TAU[42]], input[TAU[43]], input[TAU[44]], input[TAU[45]], input[TAU[46]], input[TAU[47]],
+    input[TAU[48]], input[TAU[49]], input[TAU[50]], input[TAU[51]], input[TAU[52]], input[TAU[53]],
+    input[TAU[54]], input[TAU[55]], input[TAU[56]], input[TAU[57]], input[TAU[58]], input[TAU[59]],
+    input[TAU[60]], input[TAU[61]], input[TAU[62]], input[TAU[63]]
+]);
 
 const L = (input: TArg<Uint8Array>): TRet<Uint8Array> => {
     const result = new Uint8Array(BLOCKSIZE);
 
     for (let i = 0; i < 8; i++) {
-        const parts: Uint32Array = new Uint32Array(2);
-        const tmp: Uint8Array = input.slice(i * 8, i * 8 + 8).reverse();
+        const parts = new Uint32Array(2);
+        const tmp = input.slice(i * 8, i * 8 + 8).reverse();
 
         for (let j = 0; j < 8; j++) {
             for (let k = 0; k < 8; k++) {
@@ -110,33 +80,20 @@ const E = (block: TArg<Uint8Array>, keys: TArg<Uint8Array>): TRet<Uint8Array> =>
     // block will be mutated
     let c = xorBytes(block, keys);
     /*for (let i = 0; i < 12; i++) {
-        block = LPS(xorBytes(block, C[i]));
-        c = xorBytes(LPS(c), block);
+        block = LPS(xorBytes(block, C[i])); c = xorBytes(LPS(c), block);
     }*/
-    block = LPS(xorBytes(block, C[0]));
-    c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C[1]));
-    c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C[2]));
-    c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C[3]));
-    c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C[4]));
-    c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C[5]));
-    c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C[6]));
-    c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C[7]));
-    c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C[8]));
-    c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C[9]));
-    c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C[10]));
-    c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C[11]));
-    c = xorBytes(LPS(c), block);
+    block = LPS(xorBytes(block, C[0])); c = xorBytes(LPS(c), block);
+    block = LPS(xorBytes(block, C[1])); c = xorBytes(LPS(c), block);
+    block = LPS(xorBytes(block, C[2])); c = xorBytes(LPS(c), block);
+    block = LPS(xorBytes(block, C[3])); c = xorBytes(LPS(c), block);
+    block = LPS(xorBytes(block, C[4])); c = xorBytes(LPS(c), block);
+    block = LPS(xorBytes(block, C[5])); c = xorBytes(LPS(c), block);
+    block = LPS(xorBytes(block, C[6])); c = xorBytes(LPS(c), block);
+    block = LPS(xorBytes(block, C[7])); c = xorBytes(LPS(c), block);
+    block = LPS(xorBytes(block, C[8])); c = xorBytes(LPS(c), block);
+    block = LPS(xorBytes(block, C[9])); c = xorBytes(LPS(c), block);
+    block = LPS(xorBytes(block, C[10])); c = xorBytes(LPS(c), block);
+    block = LPS(xorBytes(block, C[11])); c = xorBytes(LPS(c), block);
 
     return c;
 }
@@ -179,27 +136,27 @@ abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
 
     digestInto(buf: TArg<Uint8Array>) {
         const message = this.buffer.slice().reverse();
-        let n: Uint8Array = new Uint8Array(BLOCKSIZE);
-        let sigma: Uint8Array = new Uint8Array(BLOCKSIZE);
-        let hash: Uint8Array = new Uint8Array(BLOCKSIZE).fill(this.is512 ? 0 : 1);
+        let n = new Uint8Array(this.blockLen);
+        let sigma = new Uint8Array(this.blockLen);
+        let hash = new Uint8Array(this.blockLen).fill(this.is512 ? 0 : 1);
 
         let blocks: number = 1;
-        for (let i = message.length; i >= BLOCKSIZE; i -= BLOCKSIZE) {
-            const pos: number = message.length - blocks * BLOCKSIZE;
+        for (let i = message.length; i >= this.blockLen; i -= this.blockLen) {
+            const pos: number = message.length - blocks * this.blockLen;
 
-            hash = G(n, hash, message.subarray(pos, pos + BLOCKSIZE));
+            hash = G(n, hash, message.subarray(pos, pos + this.blockLen));
             n = add512(n, _0020);
-            sigma = add512(sigma, message.subarray(pos, pos + BLOCKSIZE));
+            sigma = add512(sigma, message.subarray(pos, pos + this.blockLen));
             blocks++;
         }
 
-        let paddedMsg: Uint8Array = new Uint8Array(BLOCKSIZE);
-        const msg: Uint8Array = message.subarray(0, message.length - (blocks - 1) * 64);
-        if (msg.length < BLOCKSIZE) {
-            paddedMsg = pad1(paddedMsg, BLOCKSIZE);
+        let paddedMsg = new Uint8Array(this.blockLen);
+        const msg = message.subarray(0, message.length - (blocks - 1) * 64);
+        if (msg.length < this.blockLen) {
+            paddedMsg = pad1(paddedMsg, this.blockLen);
 
-            paddedMsg[BLOCKSIZE - msg.length - 1] = 0x01;
-            for (let i = 0; i < msg.length; i++) paddedMsg[BLOCKSIZE - msg.length + i] = msg[i];
+            paddedMsg[this.blockLen - msg.length - 1] = 0x01;
+            for (let i = 0; i < msg.length; i++) paddedMsg[this.blockLen - msg.length + i] = msg[i];
         }
 
         hash = G(

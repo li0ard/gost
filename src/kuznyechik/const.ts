@@ -40,7 +40,7 @@ export const L: Uint8Array = new Uint8Array([
     0x01, 0x94, 0x20, 0x85, 0x10, 0xc2, 0xc0, 0x01, 0xfb, 0x01, 0xc0, 0xc2, 0x10, 0x85, 0x20, 0x94,
 ]);
 
-/*const ITER: Uint8Array[] = Array(32).fill(null).map(() => new Uint8Array(16).fill(0));
+/*const ITER: Uint8Array[] = Array(32).fill(null).map(() => new Uint8Array(16));
 for(let i = 0; i < 32; i++) {
     ITER[i][15] = i + 1;
     ITER[i] = LL(ITER[i]);
