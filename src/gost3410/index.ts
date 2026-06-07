@@ -1,5 +1,5 @@
 import { bytesToNumberBE, concatBytes, numberToBytesBE, randomBytes, type TArg, type TRet } from "@noble/curves/utils.js";
-import { CURVES, type GostCurveParameters } from "./const.js";
+import type { GostCurveParameters } from "./const.js";
 import { mod } from "@noble/curves/abstract/modular.js";
 import { weierstrass } from "@noble/curves/abstract/weierstrass.js";
 
