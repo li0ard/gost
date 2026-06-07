@@ -4,22 +4,20 @@ import { DSSZZI_UA_DKE_1, ID_GOSTR_3411_94_CRYPTOPRO_PARAM_SET } from "../magma/
 import { bytesToNumberBE, numberToBytesBE } from "@noble/curves/utils.js";
 import { xorBytes } from "../utils.js";
 
-const BLOCKSIZE = 32;
 const r = (1n << 256n) - 1n;
-
-const C2 = new Uint8Array(32);
 const C3 = new Uint8Array([
     0xff, 0x00, 0xff, 0xff, 0x00, 0x00, 0x00, 0xff,
     0xff, 0x00, 0x00, 0xff, 0x00, 0xff, 0xff, 0x00,
     0x00, 0xff, 0x00, 0xff, 0x00, 0xff, 0x00, 0xff,
     0xff, 0x00, 0xff, 0x00, 0xff, 0x00, 0xff, 0x00
 ]);
-const C4 = new Uint8Array(32);
 
-const A = (x: TArg<Uint8Array>): TRet<Uint8Array> => {
-    const x2 = x.subarray(16, 24);
-    return concatBytes(xorBytes(x.subarray(24, 32), x2), x.subarray(0, 8), x.subarray(8, 16), x2);
-}
+const A = (x: TArg<Uint8Array>): TRet<Uint8Array> => concatBytes(
+    xorBytes(x.subarray(24,32), x.subarray(16,24)),
+    x.subarray(0,8),
+    x.subarray(8,16),
+    x.subarray(16,24)
+);
 
 const P = (x: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
     x[0], x[8], x[16], x[24], x[1], x[9], x[17], x[25],
@@ -28,84 +26,58 @@ const P = (x: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
     x[6], x[14], x[22], x[30], x[7], x[15], x[23], x[31]
 ]);
 
-/*const chi = (Y: TArg<Uint8Array>): TRet<Uint8Array> => {
-    const byx = new Uint8Array(2);
-    byx[0] = Y[30] ^ Y[28] ^ Y[26] ^ Y[24] ^ Y[6] ^ Y[0];
-    byx[1] = Y[31] ^ Y[29] ^ Y[27] ^ Y[25] ^ Y[7] ^ Y[1];
-
-    const result = new Uint8Array(BLOCKSIZE);
-    result.set(byx, 0);
-    result.set(Y.slice(0,30), 2);
-
-    return result;
-}*/
 const chi = (Y: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
     Y[30] ^ Y[28] ^ Y[26] ^ Y[24] ^ Y[6] ^ Y[0],
     Y[31] ^ Y[29] ^ Y[27] ^ Y[25] ^ Y[7] ^ Y[1],
     ...Y.subarray(0,30)
 ]);
 
+const _getMagma = (
+    u: TArg<Uint8Array>,
+    v: TArg<Uint8Array>,
+    sbox: TArg<Uint8Array>[]
+): Magma => new Magma(P(xorBytes(u, v)).reverse(), sbox, true);
+
 const _step = (
     hin: TArg<Uint8Array>,
     m: TArg<Uint8Array>,
     sbox: TArg<Uint8Array>[]
 ): TRet<Uint8Array> => {
-    let u = hin;
-    let v = m;
-    let w = xorBytes(hin, m);
-    const k1 = new Magma(P(w).reverse(), sbox, true);
+    const k1 = _getMagma(hin,m, sbox);
 
-    u = xorBytes(A(u), C2);
-    v = A(A(v));
-    w = xorBytes(u, v);
-    const k2 = new Magma(P(w).reverse(), sbox, true);
+    let u = A(hin);
+    let v = A(A(m));
+    const k2 = _getMagma(u,v, sbox);
 
     u = xorBytes(A(u), C3);
     v = A(A(v));
-    w = xorBytes(u, v);
-    const k3 = new Magma(P(w).reverse(), sbox, true);
+    const k3 = _getMagma(u,v, sbox);
 
-    u = xorBytes(A(u), C4);
+    u = A(u);
     v = A(A(v));
-    w = xorBytes(u, v);
-    const k4 = new Magma(P(w).reverse(), sbox, true);
+    const k4 = _getMagma(u,v, sbox);
 
-    const s = concatBytes(
+    const x = concatBytes(
         k4.encrypt(hin.slice(0,8).reverse()).reverse(),
         k3.encrypt(hin.slice(8,16).reverse()).reverse(),
         k2.encrypt(hin.slice(16,24).reverse()).reverse(),
         k1.encrypt(hin.slice(24,32).reverse()).reverse(),
     );
+    for(let i = 0; i < 12; i++) x.set(chi(x));
 
-    //let x = new Uint8Array(s);
-    //for(let i = 0; i < 12; i++) x = chi(x);
-    let x = chi(s); x = chi(x); x = chi(x); x = chi(x);
-    x = chi(x); x = chi(x); x = chi(x); x = chi(x);
-    x = chi(x); x = chi(x); x = chi(x); x = chi(x);
+    x.set(xorBytes(
+        hin,
+        chi(xorBytes(x, m))
+    ));
 
-    x = xorBytes(x, m);
-    x = chi(x);
-    x = xorBytes(hin, x);
-
-    //for(let i = 0; i < 61; i++) x = chi(x);
-    x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x);
-    x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x);
-    x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x);
-    x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x);
-    x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x);
-    x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x);
-    x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x);
-    x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x);
-    x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x);
-    x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x); x = chi(x);
-    x = chi(x);
+    for(let i = 0; i < 61; i++) x.set(chi(x));
 
     return x;
 }
 
 /** GOST R 34.11-94 hash function */
 export class Gost341194 implements Hash<Gost341194> {
-    public readonly blockLen: number = BLOCKSIZE;
+    public readonly blockLen = 32;
     public readonly outputLen = 32;
     public readonly canXOF = false;
 
@@ -137,22 +109,22 @@ export class Gost341194 implements Hash<Gost341194> {
     digestInto(buf: TArg<Uint8Array>) {
         let len = 0n;
         let checksum = 0n;
-        const h = new Uint8Array(BLOCKSIZE);
+        const h = new Uint8Array(this.blockLen);
         const m = new Uint8Array(this.data);
 
-        for(let i = 0; i < m.length; i += BLOCKSIZE) {
-            let part: Uint8Array = m.slice(i, i + BLOCKSIZE).reverse();
+        for(let i = 0; i < m.length; i += this.blockLen) {
+            let part = m.slice(i, i + this.blockLen).reverse();
             len += BigInt(part.length) * 8n;
 
             checksum = (checksum + bytesToNumberBE(part)) & r;
-            if(part.length < BLOCKSIZE)
-                part = numberToBytesBE(bytesToNumberBE(part), BLOCKSIZE);
+            if(part.length < this.blockLen)
+                part = numberToBytesBE(bytesToNumberBE(part), this.blockLen);
             h.set(_step(h, part, this.sbox));
         }
 
         h.set(_step(
-            _step(h, numberToBytesBE(len, BLOCKSIZE), this.sbox),
-            numberToBytesBE(checksum, BLOCKSIZE),
+            _step(h, numberToBytesBE(len, this.blockLen), this.sbox),
+            numberToBytesBE(checksum, this.blockLen),
             this.sbox
         ));
         buf.set(h.reverse());
