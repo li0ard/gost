@@ -2,19 +2,7 @@ import { copyBytes, type TArg, type TRet } from "@noble/curves/utils.js";
 import { ITER, L, PI, PI_REV } from "./const.js";
 import { xorBytes } from "../utils.js";
 import type { Cipher } from "../types.js";
-
-const gfMultiply = (a: number, b: number): number => {
-    let result = 0, high_bit: number;
-    for(let _ = 0; _ < 8; _++) {
-        if((b & 1) === 1) result ^= a;
-        high_bit = a & 0x80;
-        a <<= 1;
-        if(high_bit == 0x80) a ^= 0xC3;
-        b >>= 1;
-    }
-
-    return result & 0xFF;
-}
+import { gfMultiply_lookup as gfMultiply } from "./gf.js";
 
 const S = (input: TArg<Uint8Array>, pi = PI): TRet<Uint8Array> => new Uint8Array([
     pi[input[0]], pi[input[1]], pi[input[2]], pi[input[3]],
@@ -88,10 +76,10 @@ export class Kuznyechik implements Cipher {
         roundKeys[0] = key.slice(0, this.blockSize);
         roundKeys[1] = key.slice(this.blockSize);
 
-        let temp1 = copyBytes(roundKeys[0]);
-        let temp2 = copyBytes(roundKeys[1]);
-        let temp3 = new Uint8Array(16);
-        let temp4 = new Uint8Array(16);
+        let temp1 = copyBytes(roundKeys[0]),
+            temp2 = copyBytes(roundKeys[1]),
+            temp3 = new Uint8Array(16),
+            temp4 = new Uint8Array(16);
         for (let i = 0; i < 4; i++) {
             const baseIndex = i * 8;
         
