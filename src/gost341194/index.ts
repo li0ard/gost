@@ -35,13 +35,13 @@ const chi = (Y: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
 const _getMagma = (
     u: TArg<Uint8Array>,
     v: TArg<Uint8Array>,
-    sbox: TArg<Uint8Array>[]
+    sbox: TArg<Uint8Array>
 ): Magma => new Magma(P(xorBytes(u, v)).reverse(), sbox, true);
 
 const _step = (
     hin: TArg<Uint8Array>,
     m: TArg<Uint8Array>,
-    sbox: TArg<Uint8Array>[]
+    sbox: TArg<Uint8Array>
 ): TRet<Uint8Array> => {
     const k1 = _getMagma(hin,m, sbox);
 
@@ -84,7 +84,7 @@ export class Gost341194 implements Hash<Gost341194> {
     /** GOST R 34.11-94 hash function */
     constructor(
         private data: TArg<Uint8Array> = new Uint8Array(),
-        private sbox: TArg<Uint8Array>[] = ID_GOSTR_3411_94_CRYPTOPRO_PARAM_SET
+        private sbox: TArg<Uint8Array> = ID_GOSTR_3411_94_CRYPTOPRO_PARAM_SET
     ) {}
 
     /** Create hash instance */
@@ -142,7 +142,7 @@ export class Gost341194 implements Hash<Gost341194> {
 /** GOST R 34.11-94 hash function */
 export const gost341194 = (
     msg: TArg<Uint8Array>,
-    sbox?: TArg<Uint8Array>[]
+    sbox?: TArg<Uint8Array>
 ): TRet<Uint8Array> => new Gost341194(msg, sbox).digest();
 /** DSTU GOST 34.311-95 */
 export const gost3431195 = (msg: TArg<Uint8Array>): TRet<Uint8Array> =>

@@ -4,18 +4,18 @@ import type { Cipher } from "../types.js";
 
 const BLOCKSIZE = 8, KEYSIZE = 32;
 
-const T = (value: number, sbox: TArg<Uint8Array>[]): number => (
-    (sbox[0][(value >> 0) & 0x0f] << 0) |
-    (sbox[1][(value >> 4) & 0x0f] << 4) |
-    (sbox[2][(value >> 8) & 0x0f] << 8) |
-    (sbox[3][(value >> 12) & 0x0f] << 12) |
-    (sbox[4][(value >> 16) & 0x0f] << 16) |
-    (sbox[5][(value >> 20) & 0x0f] << 20) |
-    (sbox[6][(value >> 24) & 0x0f] << 24) |
-    (sbox[7][(value >> 28) & 0x0f] << 28)
+const T = (value: number, sbox: TArg<Uint8Array>): number => (
+    (sbox[((value >> 0) & 0x0f)] << 0) |
+    (sbox[16 + ((value >> 4) & 0x0f)] << 4) |
+    (sbox[32 + ((value >> 8) & 0x0f)] << 8) |
+    (sbox[48 + ((value >> 12) & 0x0f)] << 12) |
+    (sbox[64 + ((value >> 16) & 0x0f)] << 16) |
+    (sbox[80 + ((value >> 20) & 0x0f)] << 20) |
+    (sbox[96 + ((value >> 24) & 0x0f)] << 24) |
+    (sbox[112 + ((value >> 28) & 0x0f)] << 28)
 ) >>> 0;
 
-const G = (a: number, k: number, sbox: TArg<Uint8Array>[]): number => {
+const G = (a: number, k: number, sbox: TArg<Uint8Array>): number => {
     const substituted = T((a + k) >>> 0, sbox);
     return ((substituted << 11) | (substituted >>> 21)) >>> 0;
 }
@@ -34,7 +34,7 @@ export class Magma implements Cipher {
      */
     constructor(
         key: TArg<Uint8Array>,
-        private sbox: TArg<Uint8Array>[] = ID_TC26_GOST_28147_PARAM_Z,
+        private sbox: TArg<Uint8Array> = ID_TC26_GOST_28147_PARAM_Z,
         public isLegacy: boolean = false
     ) {
         if (key.length !== this.keySize) throw new Error("Invalid key length");
@@ -42,13 +42,13 @@ export class Magma implements Cipher {
     }
 
     private regenerateRoundKeys(sequence: number[]): number[] {
-        const keyChunks: number[] = [];
+        const keyChunks = [];
         for (let j = 0; j < 8; j++)
-            keyChunks.push(Number(bytesToNumberBE(this.key.subarray(j * 4, j * 4 + 4))));
+            keyChunks.push(bytesToNumberBE(this.key.subarray(j * 4, j * 4 + 4)));
 
         const roundKeys = new Array(sequence.length);
         for (let i = 0; i < sequence.length; i++)
-            roundKeys[i] = keyChunks[sequence[i]];
+            roundKeys[i] = Number(keyChunks[sequence[i]]);
 
         return roundKeys;
     }
