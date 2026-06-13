@@ -1,4 +1,4 @@
-import { concatBytes, createHasher, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { concatBytes, copyBytes, createHasher, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { streebog256hmac } from "./hmac.js";
 import { numberToBytesBE } from "@noble/curves/utils.js";
 import { pbkdf2 } from "@noble/hashes/pbkdf2.js";
@@ -82,7 +82,7 @@ export const cpkdf = (
     if(password.length != 0) hasher.update(pin);
     const hash = hasher.digest();
 
-    const c = new Uint8Array(CPKDF_CONST);
+    const c = copyBytes(CPKDF_CONST);
     const m0 = new Uint8Array(bs);
     const m1 = new Uint8Array(bs);
     for(let j = 0; j < (password.length != 0 ? 2000 : 2); j++) {
