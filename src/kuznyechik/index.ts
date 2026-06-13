@@ -2,7 +2,7 @@ import { copyBytes, type TArg, type TRet } from "@noble/curves/utils.js";
 import { ITER, L, PI, PI_REV } from "./const.js";
 import { xorBytes } from "../utils.js";
 import type { Cipher } from "../types.js";
-import { gfMultiply_lookup as gfMultiply } from "./gf.js";
+import { gf256Multiply } from "../gf/index.js";
 
 const S = (input: TArg<Uint8Array>, pi = PI): TRet<Uint8Array> => new Uint8Array([
     pi[input[0]], pi[input[1]], pi[input[2]], pi[input[3]],
@@ -12,27 +12,27 @@ const S = (input: TArg<Uint8Array>, pi = PI): TRet<Uint8Array> => new Uint8Array
 ]);
 
 const R = (input: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
-    gfMultiply(input[15], L[0]) ^ gfMultiply(input[0], L[1]) ^
-    gfMultiply(input[1], L[2]) ^ gfMultiply(input[2], L[3]) ^
-    gfMultiply(input[3], L[4]) ^ gfMultiply(input[4], L[5]) ^
-    gfMultiply(input[5], L[6]) ^ gfMultiply(input[6], L[7]) ^
-    gfMultiply(input[7], L[8]) ^ gfMultiply(input[8], L[9]) ^
-    gfMultiply(input[9], L[10]) ^ gfMultiply(input[10], L[11]) ^
-    gfMultiply(input[11], L[12]) ^ gfMultiply(input[12], L[13]) ^
-    gfMultiply(input[13], L[14]) ^ gfMultiply(input[14], L[15]),
+    gf256Multiply(input[15], L[0]) ^ gf256Multiply(input[0], L[1]) ^
+    gf256Multiply(input[1], L[2]) ^ gf256Multiply(input[2], L[3]) ^
+    gf256Multiply(input[3], L[4]) ^ gf256Multiply(input[4], L[5]) ^
+    gf256Multiply(input[5], L[6]) ^ gf256Multiply(input[6], L[7]) ^
+    gf256Multiply(input[7], L[8]) ^ gf256Multiply(input[8], L[9]) ^
+    gf256Multiply(input[9], L[10]) ^ gf256Multiply(input[10], L[11]) ^
+    gf256Multiply(input[11], L[12]) ^ gf256Multiply(input[12], L[13]) ^
+    gf256Multiply(input[13], L[14]) ^ gf256Multiply(input[14], L[15]),
     ...input.subarray(0, 15)
 ]);
 
 const Rr = (input: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
     ...input.subarray(1, 16),
-    gfMultiply(input[0], L[0]) ^ gfMultiply(input[1], L[1]) ^
-    gfMultiply(input[2], L[2]) ^ gfMultiply(input[3], L[3]) ^
-    gfMultiply(input[4], L[4]) ^ gfMultiply(input[5], L[5]) ^
-    gfMultiply(input[6], L[6]) ^ gfMultiply(input[7], L[7]) ^
-    gfMultiply(input[8], L[8]) ^ gfMultiply(input[9], L[9]) ^
-    gfMultiply(input[10], L[10]) ^ gfMultiply(input[11], L[11]) ^
-    gfMultiply(input[12], L[12]) ^ gfMultiply(input[13], L[13]) ^
-    gfMultiply(input[14], L[14]) ^ gfMultiply(input[15], L[15])
+    gf256Multiply(input[0], L[0]) ^ gf256Multiply(input[1], L[1]) ^
+    gf256Multiply(input[2], L[2]) ^ gf256Multiply(input[3], L[3]) ^
+    gf256Multiply(input[4], L[4]) ^ gf256Multiply(input[5], L[5]) ^
+    gf256Multiply(input[6], L[6]) ^ gf256Multiply(input[7], L[7]) ^
+    gf256Multiply(input[8], L[8]) ^ gf256Multiply(input[9], L[9]) ^
+    gf256Multiply(input[10], L[10]) ^ gf256Multiply(input[11], L[11]) ^
+    gf256Multiply(input[12], L[12]) ^ gf256Multiply(input[13], L[13]) ^
+    gf256Multiply(input[14], L[14]) ^ gf256Multiply(input[15], L[15])
 ]);
 
 // Call `R` 16x times

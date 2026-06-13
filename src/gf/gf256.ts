@@ -1,5 +1,5 @@
 /*// Precompute GF(256) multiply table
-const gfMultiply_slow = (a: number, b: number): number => {
+const gf256Multiply_slow = (a: number, b: number): number => {
     let result = 0, high_bit: number;
     for(let _ = 0; _ < 8; _++) {
         if((b & 1) === 1) result ^= a;
@@ -60,7 +60,6 @@ const gf_multtable_log = new Uint8Array([
     0x37, 0xC4, 0xAF, 0x24, 0x2E, 0x6F, 0x8A, 0xA8, 0xF7, 0x60, 0x49, 0xE3, 0x80, 0x86, 0x59, 0x07
 ]);
 
-
-export const gfMultiply_lookup = (a: number, b: number) => (a == 0 || b == 0)
+export const gf256Multiply = (a: number, b: number) => (a == 0 || b == 0)
     ? 0
     : gf_multtable_exp[(gf_multtable_log[a] + gf_multtable_log[b]) % 255];

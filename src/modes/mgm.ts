@@ -2,6 +2,7 @@ import { concatBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import type { AEADMode, Cipher } from "../types.js";
 import { bytesToNumberBE, equalBytes, numberToBytesBE } from "@noble/curves/utils.js";
 import { pad1, xorBytes } from "../utils.js";
+import { gf64Multiply, gf128Multiply } from "../gf/index.js"; 
 /**
  * **EN:** Multilinear Galois (MGM) mode (AEAD)
  * 
@@ -25,7 +26,6 @@ export const mgm = (cipher: Cipher, nonce: TArg<Uint8Array>, tagSize = cipher.bl
 
     const encrypter = cipher.encrypt.bind(cipher);
     const maxSize = (1n << BigInt(cipher.blockSize * 4)) - 1n;
-    const r = (cipher.blockSize == 8 ? 0x1B : 0x87);
 
     const validateSizes = (plaintext: TArg<Uint8Array>, additional: TArg<Uint8Array>) => {
         if(plaintext.length == 0 && additional.length == 0)
@@ -34,21 +34,7 @@ export const mgm = (cipher: Cipher, nonce: TArg<Uint8Array>, tagSize = cipher.bl
             throw new Error("plaintext+additional_data are too big");
     }
 
-    const mul = (a: TArg<Uint8Array>, b: TArg<Uint8Array>) => {
-        let x = bytesToNumberBE(a);
-        let y = bytesToNumberBE(b);
-        let z = 0n;
-        const max_bit = 1n << (BigInt(cipher.blockSize) * 8n - 1n);
-
-        while (y > 0n) {
-            if((y & 1n) == 1n) z ^= x;
-            if((x & max_bit) > 0n) x = ((x ^ max_bit) << 1n) ^ BigInt(r);
-            else x <<= 1n;
-            y >>= 1n;
-        }
-
-        return numberToBytesBE(z, cipher.blockSize);
-    }
+    const mul = (cipher.blockSize == 8 ? gf64Multiply : gf128Multiply);
 
     const crypt = (icn: TArg<Uint8Array>, data: TArg<Uint8Array>) => {
         icn[0] &= 0x7F;
