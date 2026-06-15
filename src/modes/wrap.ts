@@ -3,7 +3,7 @@ import type { Cipher, WrapMode, WrapModeMagma } from "../types.js";
 import { mac as _mac, mac_legacy } from "./mac.js";
 import { ctr } from "./ctr.js";
 import { equalBytes } from "@noble/curves/utils.js";
-import { ID_GOST_28147_89_CRYPTO_PRO_A_PARAM_SET } from "../magma/const";
+import { ID_GOST_28147_89_CRYPTO_PRO_A_PARAM_SET } from "../magma/const.js";
 import { Magma } from "../magma/index.js";
 import { ecb } from "./ecb.js";
 import { cp_kek_diversify } from "./_keytransform.js";
@@ -43,7 +43,7 @@ export const kexp15 = (cipherEnc: Cipher, cipherMac: Cipher, iv: TArg<Uint8Array
 export const kwp = (
     kek: TArg<Uint8Array>,
     isCryptoPro: boolean = false,
-    sbox: TArg<Uint8Array>[] = ID_GOST_28147_89_CRYPTO_PRO_A_PARAM_SET
+    sbox: TArg<Uint8Array> = ID_GOST_28147_89_CRYPTO_PRO_A_PARAM_SET
 ): WrapModeMagma => {
     return {
         wrap: (ukm: TArg<Uint8Array>, cek: TArg<Uint8Array>): TRet<Uint8Array> => {

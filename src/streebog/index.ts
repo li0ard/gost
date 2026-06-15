@@ -1,4 +1,4 @@
-import { concatBytes, createHasher, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { concatBytes, copyBytes, createHasher, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { A, C, TAU } from "./const.js";
 import { PI } from "../kuznyechik/const.js";
 import { pad1, xorBytes } from "../utils.js";
@@ -135,7 +135,7 @@ abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
     }
 
     digestInto(buf: TArg<Uint8Array>) {
-        const message = this.buffer.slice().reverse();
+        const message = copyBytes(this.buffer).reverse();
         let n = new Uint8Array(this.blockLen);
         let sigma = new Uint8Array(this.blockLen);
         let hash = new Uint8Array(this.blockLen).fill(this.is512 ? 0 : 1);
@@ -165,7 +165,7 @@ abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
             add512(sigma, paddedMsg)
         );
 
-        if (this.is512) buf.set(hash.slice().reverse());
+        if (this.is512) buf.set(copyBytes(hash).reverse());
         else buf.set(hash.slice(0, 32).reverse());
         this.destroy();
     }

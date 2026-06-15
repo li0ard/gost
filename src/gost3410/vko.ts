@@ -1,6 +1,6 @@
 import { Field } from "@noble/curves/abstract/modular.js";
 import { weierstrass } from "@noble/curves/abstract/weierstrass.js";
-import { gost341194 } from "../gost341194";
+import { gost341194 } from "../gost341194/index.js";
 import { streebog256, streebog512 } from "../streebog/index.js";
 import type { GostCurveParameters } from "./const.js";
 import { bytesToNumberBE, concatBytes, numberToBytesLE, type TArg, type TRet } from "@noble/curves/utils.js";

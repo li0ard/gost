@@ -20,6 +20,14 @@ const G = (a: number, k: number, sbox: TArg<Uint8Array>): number => {
     return ((substituted << 11) | (substituted >>> 21)) >>> 0;
 }
 
+const extendKey = (key: TArg<Uint8Array>, sequence: number[]): TRet<Uint32Array> => {
+    const view = new DataView(key.buffer, key.byteOffset, key.byteLength);
+    const chunks = new Uint32Array(BLOCKSIZE);
+    for (let i = 0; i < BLOCKSIZE; i++) chunks[i] = view.getUint32(i * 4);
+
+    return new Uint32Array(sequence.map(i => chunks[i]));
+}
+
 /** Magma (GOST R 34.12-2015 and GOST 28147-89) cipher */
 export class Magma implements Cipher {
     public readonly keySize = KEYSIZE;
@@ -41,21 +49,9 @@ export class Magma implements Cipher {
         this.key = isLegacy ? Magma.reverseKey(key) : key;
     }
 
-    private regenerateRoundKeys(sequence: number[]): number[] {
-        const keyChunks = [];
-        for (let j = 0; j < 8; j++)
-            keyChunks.push(bytesToNumberBE(this.key.subarray(j * 4, j * 4 + 4)));
-
-        const roundKeys = new Array(sequence.length);
-        for (let i = 0; i < sequence.length; i++)
-            roundKeys[i] = Number(keyChunks[sequence[i]]);
-
-        return roundKeys;
-    }
-
     public proceedBlock(block: TArg<Uint8Array>, sequence: number[]): TRet<Uint8Array> {
         if (block.length !== this.blockSize) throw new Error("Invalid block size");
-        const roundKeys = this.regenerateRoundKeys(sequence);
+        const roundKeys = extendKey(this.key, sequence);
 
         let a0 = Number(bytesToNumberBE(block.subarray(0, 4)));
         let a1 = Number(bytesToNumberBE(block.subarray(4, 8)));

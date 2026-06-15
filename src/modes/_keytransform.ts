@@ -8,7 +8,7 @@ import { ctr } from "./ctr.js";
 export const cp_kek_diversify = (
     kek: TArg<Uint8Array>,
     ukm: TArg<Uint8Array>,
-    sbox: TArg<Uint8Array>[] = ID_GOST_28147_89_CRYPTO_PRO_A_PARAM_SET
+    sbox: TArg<Uint8Array> = ID_GOST_28147_89_CRYPTO_PRO_A_PARAM_SET
 ): TRet<Uint8Array> => {
     let out = copyBytes(kek);
     for (let i = 0; i < 8; i++) {
