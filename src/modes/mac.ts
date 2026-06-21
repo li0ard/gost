@@ -1,7 +1,7 @@
-import { type TArg, type TRet } from "@noble/hashes/utils.js";
+import { concatBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import type { Cipher, MACMode } from "../types.js";
 import { pad1, pad3, xorBytes } from "../utils.js";
-import { bytesToNumberBE, numberToVarBytesBE } from "@noble/curves/utils.js";
+import { bytesToNumberBE, bytesToNumberLE, numberToBytesLE, numberToVarBytesBE } from "@noble/curves/utils.js";
 import { magmaKeySequences, Magma } from "../magma/index.js";
 import { acpkm_master } from "./_keytransform.js";
 
@@ -73,23 +73,23 @@ export const mac = (cipher: Cipher): MACMode => {
  */
 export const mac_legacy = (cipher: Magma, iv: TArg<Uint8Array> = new Uint8Array(cipher.blockSize)): MACMode => {
     const split = (data: TArg<Uint8Array>): number[] => [
-        (data[0] | data[1] << 8 | data[2] << 16 | data[3] << 24) >>> 0,
-        (data[4] | data[5] << 8 | data[6] << 16 | data[7] << 24) >>> 0
+        Number(bytesToNumberLE(data.subarray(0, 4))),
+        Number(bytesToNumberLE(data.subarray(4, 8))) 
     ];
-    const join = (ns: number[]): TRet<Uint8Array> => new Uint8Array([
-        (ns[1] >> 0) & 0xFF, (ns[1] >> 8) & 0xFF, (ns[1] >> 16) & 0xFF, (ns[1] >> 24) & 0xFF,
-        (ns[0] >> 0) & 0xFF, (ns[0] >> 8) & 0xFF, (ns[0] >> 16) & 0xFF, (ns[0] >> 24) & 0xFF
-    ]);
+    const join = (ns: number[]): TRet<Uint8Array> => concatBytes(
+        numberToBytesLE(ns[1], 4),
+        numberToBytesLE(ns[0], 4)
+    );
 
     return {
         compute: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
             const paddedData = pad1(msg, cipher.blockSize);
 
             let prev = split(iv).reverse();
-            for(let i = 0; i < paddedData.length; i += cipher.blockSize) prev = split(Magma.reverseChunks(cipher.proceedBlock(
-                Magma.reverseChunks(xorBytes(paddedData.subarray(i, i + cipher.blockSize), join(prev))),
+            for(let i = 0; i < paddedData.length; i += cipher.blockSize) prev = split(cipher.proceedBlock(
+                xorBytes(paddedData.subarray(i, i + cipher.blockSize), join(prev)),
                 magmaKeySequences.MAC
-            )));
+            ));
 
             return join(prev);
         }
