@@ -62,13 +62,20 @@ const F = (
     iter: TArg<Uint8Array>
 ): TRet<Uint8Array> => xorBytes(LLS(xorBytes(inKey, iter)), inKey2);
 
-/** Kuznyechik (GOST R 34.12-2015) cipher */
+/**
+ * **Kuznyechik cipher**
+ * 
+ * Described by GOST R 34.12-2015 ([RFC 7801](https://datatracker.ietf.org/doc/html/rfc7801.html))
+ */
 export class Kuznyechik implements Cipher {
     public readonly keySize = 32;
     public readonly blockSize = 16;
 
     private roundKeys: Uint8Array[];
-    /** Kuznyechik (GOST R 34.12-2015) cipher */
+    /**
+     * Kuznyechik (GOST R 34.12-2015) cipher
+     * @param key Encryption key
+     */
     constructor(key: TArg<Uint8Array>) {
         if (key.length !== this.keySize) throw new Error("Invalid key length");
 

@@ -171,7 +171,11 @@ abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
     }
 }
 
-/** Streebog-256 (GOST R 34.11-2012) hash function */
+/**
+ * **Streebog-256 hash function**
+ * 
+ * Described by GOST R 34.11-2012 ([RFC 6986](https://datatracker.ietf.org/doc/html/rfc6986.html))
+ */
 export class Streebog256 extends Streebog<Streebog256> {
     /** Streebog-256 (GOST R 34.11-2012) hash function */
     constructor() { super(false); }
@@ -188,7 +192,11 @@ export class Streebog256 extends Streebog<Streebog256> {
     }
 }
 
-/** Streebog-512 (GOST R 34.11-2012) hash function */
+/**
+ * **Streebog-512 hash function**
+ * 
+ * Described by GOST R 34.11-2012 ([RFC 6986](https://datatracker.ietf.org/doc/html/rfc6986.html))
+ */
 export class Streebog512 extends Streebog<Streebog512> {
     /** Streebog-512 (GOST R 34.11-2012) hash function */
     constructor() { super(true); }
@@ -205,7 +213,13 @@ export class Streebog512 extends Streebog<Streebog512> {
     }
 }
 
-/** Streebog-256 (GOST R 34.11-2012) hash function */
-export const streebog256 = createHasher(Streebog256.create);
-/** Streebog-512 (GOST R 34.11-2012) hash function */
-export const streebog512 = createHasher(Streebog512.create);
+/**
+ * **Streebog-256 hash function**
+ * 
+ * Described by GOST R 34.11-2012 ([RFC 6986](https://datatracker.ietf.org/doc/html/rfc6986.html))
+ */export const streebog256 = createHasher(Streebog256.create);
+/**
+ * **Streebog-512 hash function**
+ * 
+ * Described by GOST R 34.11-2012 ([RFC 6986](https://datatracker.ietf.org/doc/html/rfc6986.html))
+ */export const streebog512 = createHasher(Streebog512.create);
