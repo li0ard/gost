@@ -28,6 +28,7 @@ npm i @li0ard/gost
 - Kuznyechik cipher (GOST R 34.12-2015)
 - Magma cipher (GOST R 34.12-2015)
     - Supports legacy version from GOST 28147-89
+    - Various S-Box'es included (CryptoPro, DSSZZI, tests etc.)
 - Streebog hash function (GOST R 34.11-2012)
     - Supports HMAC, PBKDF2 (512 bit), `kdf_gostr3411_2012_256`, `kdf_tree_gostr3411_2012_256` and CPKDF
 

@@ -10,8 +10,7 @@ const _0 = new Uint8Array(64);
 
 const add512 = (a: TArg<Uint8Array>, b: TArg<Uint8Array>): TRet<Uint8Array> => {
     const c = new Uint8Array(64);
-    const tmpA = new Uint8Array(64);
-    const tmpB = new Uint8Array(64);
+    const tmpA = new Uint8Array(64), tmpB = new Uint8Array(64);
 
     for (let i = 0; i < a.length; i++) tmpA[63 - i] = a[a.length - i - 1];
     for (let i = 0; i < b.length; i++) tmpB[63 - i] = b[b.length - i - 1];

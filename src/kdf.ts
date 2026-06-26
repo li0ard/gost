@@ -9,8 +9,6 @@ import { pad1, xorBytes } from "./utils.js";
 const _0 = new Uint8Array([0]);
 const _1 = new Uint8Array([1]);
 const _0100 = new Uint8Array([1,0]);
-const CPKDF_CONST = new Uint8Array(64);
-CPKDF_CONST.set(new TextEncoder().encode("DENEFH028.760246785.IUEFHWUIO.EF"));
 const _36 = new Uint8Array(64).fill(0x36);
 const _5C = new Uint8Array(64).fill(0x5C);
 
@@ -82,9 +80,9 @@ export const cpkdf = (
     if(password.length != 0) hasher.update(pin);
     const hash = hasher.digest();
 
-    const c = copyBytes(CPKDF_CONST);
-    const m0 = new Uint8Array(bs);
-    const m1 = new Uint8Array(bs);
+    const c = new Uint8Array(64);
+    c.set(new TextEncoder().encode("DENEFH028.760246785.IUEFHWUIO.EF"));
+    const m0 = new Uint8Array(bs), m1 = new Uint8Array(bs);
     for(let j = 0; j < (password.length != 0 ? 2000 : 2); j++) {
         m0.set(xorBytes(c, _36));
         m1.set(xorBytes(c, _5C));
