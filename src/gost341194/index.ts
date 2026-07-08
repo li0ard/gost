@@ -1,4 +1,4 @@
-import { concatBytes, copyBytes, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { concatBytes, copyBytes, createHasher, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { Magma } from "../magma/index.js";
 import { DSSZZI_UA_DKE_1, ID_GOSTR_3411_94_CRYPTOPRO_PARAM_SET } from "../magma/const.js";
 import { bytesToNumberBE, numberToBytesBE } from "@noble/curves/utils.js";
@@ -18,10 +18,10 @@ const A = (x: TArg<Uint8Array>): TRet<Uint8Array> => concatBytes(
 );
 
 const P = (x: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
-    x[0], x[8], x[16], x[24], x[1], x[9], x[17], x[25],
-    x[2], x[10], x[18], x[26], x[3], x[11], x[19], x[27],
-    x[4], x[12], x[20], x[28], x[5], x[13], x[21], x[29],
-    x[6], x[14], x[22], x[30], x[7], x[15], x[23], x[31]
+    x[31], x[23], x[15], x[7], x[30], x[22], x[14], x[6],
+    x[29], x[21], x[13], x[5], x[28], x[20], x[12], x[4],
+    x[27], x[19], x[11], x[3], x[26], x[18], x[10], x[2],
+    x[25], x[17], x[9], x[1], x[24], x[16], x[8], x[0]
 ]);
 
 const chi = (Y: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
@@ -34,7 +34,7 @@ const _getMagma = (
     u: TArg<Uint8Array>,
     v: TArg<Uint8Array>,
     sbox: TArg<Uint8Array>
-): Magma => new Magma(P(xorBytes(u, v)).reverse(), sbox, true);
+): Magma => new Magma(P(xorBytes(u, v)), sbox, true);
 
 const _step = (
     hin: TArg<Uint8Array>,
@@ -43,16 +43,13 @@ const _step = (
 ): TRet<Uint8Array> => {
     const k1 = _getMagma(hin,m,sbox);
 
-    let u = A(hin);
-    let v = A(A(m));
+    let u = A(hin), v = A(A(m));
     const k2 = _getMagma(u,v,sbox);
 
-    u = xorBytes(A(u), C3);
-    v = A(A(v));
+    u = xorBytes(A(u), C3), v = A(A(v));
     const k3 = _getMagma(u,v,sbox);
 
-    u = A(u);
-    v = A(A(v));
+    u = A(u), v = A(A(v));
     const k4 = _getMagma(u,v,sbox);
 
     const x = concatBytes(
@@ -105,11 +102,8 @@ export class Gost341194 implements Hash<Gost341194> {
     }
 
     digestInto(buf: TArg<Uint8Array>) {
-        let len = 0n;
-        let checksum = 0n;
-        const h = new Uint8Array(this.blockLen);
-        const m = copyBytes(this.buffer);
-
+        let len = 0n, checksum = 0n;
+        const h = new Uint8Array(this.blockLen), m = copyBytes(this.buffer);
         for(let i = 0; i < m.length; i += this.blockLen) {
             let part = m.slice(i, i + this.blockLen).reverse();
             len += BigInt(part.length) * 8n;
@@ -138,10 +132,7 @@ export class Gost341194 implements Hash<Gost341194> {
 }
 
 /** GOST R 34.11-94 hash function */
-export const gost341194 = (
-    msg: TArg<Uint8Array>,
-    sbox?: TArg<Uint8Array>
-): TRet<Uint8Array> => new Gost341194(msg, sbox).digest();
+export const gost341194 = createHasher(Gost341194.create);
 /** DSTU GOST 34.311-95 */
 export const gost3431195 = (msg: TArg<Uint8Array>): TRet<Uint8Array> =>
-    gost341194(msg, DSSZZI_UA_DKE_1);
+    new Gost341194(msg, DSSZZI_UA_DKE_1).digest();

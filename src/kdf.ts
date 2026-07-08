@@ -1,9 +1,9 @@
-import { concatBytes, copyBytes, createHasher, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { concatBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { streebog256hmac } from "./hmac.js";
 import { numberToBytesBE } from "@noble/curves/utils.js";
 import { pbkdf2 } from "@noble/hashes/pbkdf2.js";
 import { Streebog256, streebog256, streebog512 } from "./streebog/index.js";
-import { Gost341194 } from "./gost341194/index.js";
+import { gost341194 } from "./gost341194/index.js";
 import { pad1, xorBytes } from "./utils.js";
 
 const _0 = new Uint8Array([0]);
@@ -62,7 +62,7 @@ export const gost341194pbkdf2 = (
     salt: TArg<Uint8Array>,
     iter: number,
     dkLen: number
-): TRet<Uint8Array> => pbkdf2(createHasher(Gost341194.create), password, salt, { dkLen, c: iter });
+): TRet<Uint8Array> => pbkdf2(gost341194, password, salt, { dkLen, c: iter });
 
 export const cpkdf = (
     password: TArg<Uint8Array>,

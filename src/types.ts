@@ -1,6 +1,6 @@
 import type { TArg, TRet } from "@noble/hashes/utils.js";
 
-export type HashFunctionWrapper = (msg: TArg<Uint8Array>) => TRet<Uint8Array>;
+export type CipherOrHashFunctionWrapper = (msg: TArg<Uint8Array>) => TRet<Uint8Array>;
 
 /** Cipher core */
 export type Cipher = {
@@ -25,13 +25,13 @@ export type BlockMode = {
 /** Stream-like mode for {@link Cipher} */
 export type StreamMode = {
     /** Proceed message */
-    crypt: (msg: TArg<Uint8Array>) => TRet<Uint8Array>;
+    crypt: CipherOrHashFunctionWrapper;
 }
 
 /** MAC mode for {@link Cipher} */
 export type MACMode = {
     /** Compute MAC */
-    compute: (msg: TArg<Uint8Array>) => TRet<Uint8Array>;
+    compute: CipherOrHashFunctionWrapper;
 }
 
 /** AEAD mode for {@link Cipher} */

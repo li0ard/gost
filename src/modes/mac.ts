@@ -128,7 +128,7 @@ export const omac_acpkm = (cipher: Cipher): MACMode => {
                     let cipher2 = new cipher.constructor(key);
                     encrypter = cipher2.encrypt.bind(cipher2);
                 }
-                prev = encrypter(xorBytes(msg.slice(i, i + cipher.blockSize), prev));
+                prev = encrypter(xorBytes(msg.subarray(i, i + cipher.blockSize), prev));
             }
 
             const tail = msg.slice(tail_offset);
@@ -140,7 +140,7 @@ export const omac_acpkm = (cipher: Cipher): MACMode => {
                 encrypter = cipher2.encrypt.bind(cipher2);
             }
             let k2 = numberToVarBytesBE(bytesToNumberBE(k1) << 1n);
-            if((k1.slice()[0] & 0x80) != 0)
+            if((k1[0] & 0x80) != 0)
                 k2 = xorBytes(k2, numberToVarBytesBE(cipher.blockSize == 16 ? Rb128 : Rb64));
             return encrypter(xorBytes(
                 xorBytes(pad3(tail, cipher.blockSize), prev),

@@ -57,7 +57,7 @@ export const mgm = (cipher: Cipher, nonce: TArg<Uint8Array>, tagSize = cipher.bl
         while (ad.length > 0) {
             _sum = xorBytes(_sum, mul(
                 encrypter(enc),
-                pad1(ad.slice(0, cipher.blockSize), cipher.blockSize)
+                pad1(ad.subarray(0, cipher.blockSize), cipher.blockSize)
             ));
             enc = incr_l(enc);
             ad = ad.slice(cipher.blockSize);
@@ -66,7 +66,7 @@ export const mgm = (cipher: Cipher, nonce: TArg<Uint8Array>, tagSize = cipher.bl
         while (text.length > 0) {
             _sum = xorBytes(_sum, mul(
                 encrypter(enc),
-                pad1(text.slice(0, cipher.blockSize), cipher.blockSize)
+                pad1(text.subarray(0, cipher.blockSize), cipher.blockSize)
             ));
             enc = incr_l(enc);
             text = text.slice(cipher.blockSize);
@@ -77,7 +77,7 @@ export const mgm = (cipher: Cipher, nonce: TArg<Uint8Array>, tagSize = cipher.bl
             numberToBytesBE(text_len * 8, halfbs),
         )));
 
-        return encrypter(_sum).slice(0, tagSize);
+        return encrypter(_sum).subarray(0, tagSize);
     }
 
     return {

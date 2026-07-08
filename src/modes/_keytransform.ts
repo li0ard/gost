@@ -2,7 +2,7 @@ import { type TArg, type TRet, bytesToNumberLE, concatBytes, copyBytes, numberTo
 import { Magma } from "../magma/index.js";
 import { ID_GOST_28147_89_CRYPTO_PRO_A_PARAM_SET } from "../magma/const.js";
 import { cfb } from "./cfb.js";
-import type { Cipher } from "../types.js";
+import type { Cipher, CipherOrHashFunctionWrapper } from "../types.js";
 import { ctr } from "./ctr.js";
 
 export const cp_kek_diversify = (
@@ -26,11 +26,17 @@ export const cp_kek_diversify = (
     return out as TRet<Uint8Array>;
 }
 
-export const acpkm = (encrypter: (msg: TArg<Uint8Array>) => TRet<Uint8Array>, bs: number): TRet<Uint8Array> => {
+const ACPKM_D = new Uint8Array([
+    0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87,
+    0x88, 0x89, 0x8A, 0x8B, 0x8C, 0x8D, 0x8E, 0x8F,
+    0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97,
+    0x98, 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0x9F
+]);
+
+export const acpkm = (encrypter: CipherOrHashFunctionWrapper, bs: number): TRet<Uint8Array> => {
     const result: Uint8Array[] = [];
-    for (let d = 0x80; d < (0x80 + bs * (32 / bs)); d += bs) {
-        const block = new Uint8Array(bs);
-        for (let i = 0; i < bs; i++) block[i] = d + i;
+    for (let i = 0; i < 32; i += bs) {
+        const block = ACPKM_D.subarray(i, i + bs);
         result.push(encrypter(block));
     }
 

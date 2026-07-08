@@ -14,7 +14,8 @@ export const ofb = (cipher: Cipher, iv: TArg<Uint8Array>): StreamMode => {
     return {
         crypt: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
             let r: Uint8Array[] = [];
-            for (let i = 0; i < iv.length; i += cipher.blockSize) r.push(iv.slice(i, i + cipher.blockSize));
+            for (let i = 0; i < iv.length; i += cipher.blockSize)
+                r.push(iv.subarray(i, i + cipher.blockSize));
 
             const result: Uint8Array[] = [];
             for(let i = 0; i < (msg.length + getPadLength(msg.length, cipher.blockSize)); i += cipher.blockSize) {

@@ -21,7 +21,7 @@ export const cbc = (cipher: Cipher, iv: TArg<Uint8Array>): BlockMode => {
             
             let r: Uint8Array[] = [];
             for (let i = 0; i < iv.length; i += cipher.blockSize)
-                r.push(iv.slice(i, i + cipher.blockSize));
+                r.push(iv.subarray(i, i + cipher.blockSize));
 
             const result: Uint8Array[] = [];
             for(let i = 0; i < plaintext.length; i += cipher.blockSize) {
@@ -37,7 +37,7 @@ export const cbc = (cipher: Cipher, iv: TArg<Uint8Array>): BlockMode => {
 
             let r: Uint8Array[] = [];
             for (let i = 0; i < iv.length; i += cipher.blockSize)
-                r.push(iv.slice(i, i + cipher.blockSize));
+                r.push(iv.subarray(i, i + cipher.blockSize));
 
             const result: Uint8Array[] = [];
             for(let i = 0; i < ciphertext.length; i += cipher.blockSize) {
@@ -46,7 +46,7 @@ export const cbc = (cipher: Cipher, iv: TArg<Uint8Array>): BlockMode => {
                 r = r.slice(1).concat(blk);
             }
 
-            return concatBytes(...result)
+            return concatBytes(...result);
         }
     }
 }

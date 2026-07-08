@@ -216,9 +216,11 @@ export class Streebog512 extends Streebog<Streebog512> {
  * **Streebog-256 hash function**
  * 
  * Described by GOST R 34.11-2012 ([RFC 6986](https://datatracker.ietf.org/doc/html/rfc6986.html))
- */export const streebog256 = createHasher(Streebog256.create);
+ */
+export const streebog256 = createHasher(Streebog256.create);
 /**
  * **Streebog-512 hash function**
  * 
  * Described by GOST R 34.11-2012 ([RFC 6986](https://datatracker.ietf.org/doc/html/rfc6986.html))
- */export const streebog512 = createHasher(Streebog512.create);
+ */
+export const streebog512 = createHasher(Streebog512.create);

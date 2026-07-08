@@ -16,7 +16,7 @@ export const cfb = (cipher: Cipher, iv: TArg<Uint8Array>): BlockMode => {
         encrypt: (plaintext: TArg<Uint8Array>): TRet<Uint8Array> => {
             let r: Uint8Array[] = [];
             for (let i = 0; i < iv.length; i += cipher.blockSize)
-                r.push(iv.slice(i, i + cipher.blockSize));
+                r.push(iv.subarray(i, i + cipher.blockSize));
 
             const result: Uint8Array[] = [];
             for(let i = 0; i < (plaintext.length + getPadLength(plaintext.length, cipher.blockSize)); i += cipher.blockSize) {
@@ -29,7 +29,7 @@ export const cfb = (cipher: Cipher, iv: TArg<Uint8Array>): BlockMode => {
         decrypt: (ciphertext: TArg<Uint8Array>): TRet<Uint8Array> => {
             let r: Uint8Array[] = [];
             for (let i = 0; i < iv.length; i += cipher.blockSize)
-                r.push(iv.slice(i, i + cipher.blockSize));
+                r.push(iv.subarray(i, i + cipher.blockSize));
 
             const result: Uint8Array[] = [];
             for(let i = 0; i < (ciphertext.length + getPadLength(ciphertext.length, cipher.blockSize)); i += cipher.blockSize) {

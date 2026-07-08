@@ -85,8 +85,8 @@ export class Kuznyechik implements Cipher {
 
         let temp1 = copyBytes(roundKeys[0]),
             temp2 = copyBytes(roundKeys[1]),
-            temp3 = new Uint8Array(16),
-            temp4 = new Uint8Array(16);
+            temp3 = new Uint8Array(this.blockSize),
+            temp4 = new Uint8Array(this.blockSize);
         for (let i = 0; i < 4; i++) {
             const baseIndex = i * 8;
         
@@ -124,17 +124,16 @@ export class Kuznyechik implements Cipher {
     encrypt(plaintext: TArg<Uint8Array>): TRet<Uint8Array> {
         if (plaintext.length !== this.blockSize)
             throw new Error("Invalid block size");
-        //let currentBlock = copyBytes(plaintext);
-        //for (let i = 0; i < 9; i++) currentBlock = LLS(xorBytes(this.roundKeys[i], currentBlock));
-        let currentBlock = LLS(xorBytes(this.roundKeys[0], plaintext));
-        currentBlock = LLS(xorBytes(this.roundKeys[1], currentBlock));
-        currentBlock = LLS(xorBytes(this.roundKeys[2], currentBlock));
-        currentBlock = LLS(xorBytes(this.roundKeys[3], currentBlock));
-        currentBlock = LLS(xorBytes(this.roundKeys[4], currentBlock));
-        currentBlock = LLS(xorBytes(this.roundKeys[5], currentBlock));
-        currentBlock = LLS(xorBytes(this.roundKeys[6], currentBlock));
-        currentBlock = LLS(xorBytes(this.roundKeys[7], currentBlock));
-        currentBlock = LLS(xorBytes(this.roundKeys[8], currentBlock));
+
+        const currentBlock = LLS(xorBytes(this.roundKeys[0], plaintext));
+        currentBlock.set(LLS(xorBytes(this.roundKeys[1], currentBlock)));
+        currentBlock.set(LLS(xorBytes(this.roundKeys[2], currentBlock)));
+        currentBlock.set(LLS(xorBytes(this.roundKeys[3], currentBlock)));
+        currentBlock.set(LLS(xorBytes(this.roundKeys[4], currentBlock)));
+        currentBlock.set(LLS(xorBytes(this.roundKeys[5], currentBlock)));
+        currentBlock.set(LLS(xorBytes(this.roundKeys[6], currentBlock)));
+        currentBlock.set(LLS(xorBytes(this.roundKeys[7], currentBlock)));
+        currentBlock.set(LLS(xorBytes(this.roundKeys[8], currentBlock)));
 
         return xorBytes(this.roundKeys[9], currentBlock);
     }
@@ -142,18 +141,16 @@ export class Kuznyechik implements Cipher {
     decrypt(ciphertext: TArg<Uint8Array>): TRet<Uint8Array> {
         if (ciphertext.length !== this.blockSize)
             throw new Error("Invalid block size");
-        let currentBlock = xorBytes(this.roundKeys[9], ciphertext);
 
-        //const reversedKeys = this.roundKeys.slice(0, 9).reverse();
-        //for (let i = 0; i < 9; i++) currentBlock = xorBytes(reversedKeys[i], SLLr(currentBlock));
-        currentBlock = xorBytes(this.roundKeys[8], SLLr(currentBlock));
-        currentBlock = xorBytes(this.roundKeys[7], SLLr(currentBlock));
-        currentBlock = xorBytes(this.roundKeys[6], SLLr(currentBlock));
-        currentBlock = xorBytes(this.roundKeys[5], SLLr(currentBlock));
-        currentBlock = xorBytes(this.roundKeys[4], SLLr(currentBlock));
-        currentBlock = xorBytes(this.roundKeys[3], SLLr(currentBlock));
-        currentBlock = xorBytes(this.roundKeys[2], SLLr(currentBlock));
-        currentBlock = xorBytes(this.roundKeys[1], SLLr(currentBlock));
+        const currentBlock = xorBytes(this.roundKeys[9], ciphertext);
+        currentBlock.set(xorBytes(this.roundKeys[8], SLLr(currentBlock)));
+        currentBlock.set(xorBytes(this.roundKeys[7], SLLr(currentBlock)));
+        currentBlock.set(xorBytes(this.roundKeys[6], SLLr(currentBlock)));
+        currentBlock.set(xorBytes(this.roundKeys[5], SLLr(currentBlock)));
+        currentBlock.set(xorBytes(this.roundKeys[4], SLLr(currentBlock)));
+        currentBlock.set(xorBytes(this.roundKeys[3], SLLr(currentBlock)));
+        currentBlock.set(xorBytes(this.roundKeys[2], SLLr(currentBlock)));
+        currentBlock.set(xorBytes(this.roundKeys[1], SLLr(currentBlock)));
 
         return xorBytes(this.roundKeys[0], SLLr(currentBlock));
     }

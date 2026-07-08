@@ -61,7 +61,7 @@ export const cnt = (cipher: Magma, iv: TArg<Uint8Array>): StreamMode => {
 
             const gamma = [];
             for (let i = 0; i < (msg.length + getPadLength(msg.length, cipher.blockSize)); i += cipher.blockSize) {
-                n1 = (n1 + C2) % 0x100000000n;
+                n1 = (n1 + C2) & 0xFFFFFFFFn;
                 n2 = (n2 + C1) % 0xFFFFFFFFn;
                 gamma.push(encrypter(concatBytes(
                     numberToBytesLE(n1, 4),
