@@ -134,6 +134,7 @@ abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
     }
 
     digestInto(buf: TArg<Uint8Array>) {
+        if(buf.length != this.outputLen) throw new Error("digestInto: Invalid buffer length");
         const message = copyBytes(this.buffer).reverse();
         let n = new Uint8Array(this.blockLen);
         let sigma = new Uint8Array(this.blockLen);

@@ -75,12 +75,12 @@ export class Gost341194 implements Hash<Gost341194> {
     public readonly blockLen = 32;
     public readonly outputLen = 32;
     public readonly canXOF = false;
+    private buffer: TArg<Uint8Array>;
 
     /** GOST R 34.11-94 hash function */
     constructor(
-        private buffer: TArg<Uint8Array> = new Uint8Array(),
         private sbox: TArg<Uint8Array> = ID_GOSTR_3411_94_CRYPTOPRO_PARAM_SET
-    ) {}
+    ) { this.buffer = new Uint8Array(); }
 
     /** Create hash instance */
     public static create(): Gost341194 { return new Gost341194(); }
@@ -102,6 +102,7 @@ export class Gost341194 implements Hash<Gost341194> {
     }
 
     digestInto(buf: TArg<Uint8Array>) {
+        if(buf.length != this.outputLen) throw new Error("digestInto: Invalid buffer length");
         let len = 0n, checksum = 0n;
         const h = new Uint8Array(this.blockLen), m = copyBytes(this.buffer);
         for(let i = 0; i < m.length; i += this.blockLen) {
@@ -134,5 +135,4 @@ export class Gost341194 implements Hash<Gost341194> {
 /** GOST R 34.11-94 hash function */
 export const gost341194 = createHasher(Gost341194.create);
 /** DSTU GOST 34.311-95 */
-export const gost3431195 = (msg: TArg<Uint8Array>): TRet<Uint8Array> =>
-    new Gost341194(msg, DSSZZI_UA_DKE_1).digest();
+export const gost3431195 = createHasher(() => new Gost341194(DSSZZI_UA_DKE_1));
