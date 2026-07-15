@@ -19,8 +19,8 @@ export const getPublicKey = (
  * @param parameters Curve parameters
  * @param prv Private key
  * @param digest Digest to sign
- * @param rand Optional. Predefined random data for `r` and `k` generation
- * @returns {TRet<Uint8Array>} Concated `r` and `s` (in BE order)
+ * @param rand Optional. Predefined random data for `k` generation
+ * @returns {TRet<Uint8Array>} Concatenated `r` and `s` (in BE order)
  */
 export const sign = (
     parameters: GostCurveParameters,
@@ -31,17 +31,16 @@ export const sign = (
     const size = parameters.length;
     const curve = weierstrass(parameters);
     const Fn = curve.Fn;
-    let e = mod(bytesToNumberBE(digest), Fn.ORDER); //Fn.fromBytes(digest);
+    let e = mod(bytesToNumberBE(digest), Fn.ORDER);
     if(e === 0n) e = 1n;
 
-    const prvNum = mod(bytesToNumberBE(prv), Fn.ORDER); //Fn.fromBytes(prv);
+    const prvNum = mod(bytesToNumberBE(prv), Fn.ORDER);
     while (true) {
         rand ||= randomBytes(size)
         const k = mod(bytesToNumberBE(rand), parameters.n);
         if(k === 0n) continue;
         try {
-            let {x: r} = curve.BASE.multiply(k);
-            r = Fn.create(r);
+            const r = mod(curve.BASE.multiply(k).x, Fn.ORDER);
             if(r === 0n) continue;
             
             const s = Fn.add(Fn.mul(r, prvNum), Fn.mul(k, e));
@@ -64,7 +63,7 @@ export const sign = (
  * @param parameters Curve parameters
  * @param pub Public key
  * @param digest Digest to verify
- * @param signature Signature (Concated `r` and `s`) (in BE order)
+ * @param signature Signature (Concatenated `r` and `s`) (in BE order)
  */
 export const verify = (
     parameters: GostCurveParameters,
@@ -78,22 +77,22 @@ export const verify = (
 
     if(signature.length != size * 2) throw new Error("Invalid signature");
 
-    const r = bytesToNumberBE(signature.subarray(0, size));
-    const s = bytesToNumberBE(signature.subarray(size));
-
+    const r = bytesToNumberBE(signature.subarray(0, size)),
+        s = bytesToNumberBE(signature.subarray(size));
     if(r <= 0 || r >= parameters.n || s <= 0 || s >= parameters.n) return false;
-    let e = mod(bytesToNumberBE(digest), Fn.ORDER); //Fn.fromBytes(digest);
+
+    let e = mod(bytesToNumberBE(digest), Fn.ORDER);
     if(e === 0n) e = 1n;
 
     const v = Fn.inv(e);
-
     const z1 = Fn.mul(s, v), z2 = Fn.mul(r, v);
     let P, Q;
     try {
         P = curve.BASE.multiply(z1);
         Q = curve.fromBytes(pub).multiply(z2).negate();
     } catch { return false; }
-    return Fn.create(P.add(Q).x) === r;
+
+    return mod(P.add(Q).x, Fn.ORDER) === r;
 }
 
 /** Swap `r` and `s` in signature */

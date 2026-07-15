@@ -6,7 +6,7 @@ test("[SIGN] VKO 2001", () => {
     const ukm = hexToBytes("5172be25f852a233").reverse();
     const prv1 = hexToBytes("1df129e43dab345b68f6a852f4162dc69f36b2f84717d08755cc5c44150bf928").reverse();
     const prv2 = hexToBytes("5b9356c6474f913f1e83885ea0edd5df1a43fd9d799d219093241157ac9ed473").reverse();
-    const kek = hexToBytes("ee4618a0dbb10cb31777b4b86a53d9e7ef6cb3e400101410f0c0f2af46c494a6")
+    const kek = hexToBytes("ee4618a0dbb10cb31777b4b86a53d9e7ef6cb3e400101410f0c0f2af46c494a6");
     const pub1 = getPublicKey(ID_GOSTR3410_2001_TEST_PARAM_SET, prv1);
     const pub2 = getPublicKey(ID_GOSTR3410_2001_TEST_PARAM_SET, prv2);
     expect(kek_34102001(ID_GOSTR3410_2001_TEST_PARAM_SET, prv1, pub2, ukm)).toStrictEqual(kek);
