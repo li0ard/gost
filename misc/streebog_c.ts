@@ -2,7 +2,6 @@
 // Source: https://tc26.ru/upload/medialibrary/efb/streebog_constants_eng%20Rudskoi.pdf
 
 import { hexToBytes, bytesToHex, type TArg, type TRet } from "@noble/hashes/utils.js";
-import { TAU } from "../src/streebog/const.js";
 import { PI } from "../src/kuznyechik/const.js";
 import { pad1, xorBytes } from "../src/utils.js";
 import { numberToBytesBE } from "@noble/curves/utils.js";
@@ -33,12 +32,16 @@ const S = (input: TArg<Uint8Array>): TRet<Uint8Array> => {
     return result;
 }
 
-const P = (input: TArg<Uint8Array>): TRet<Uint8Array> => {
-    const result = new Uint8Array(BLOCKSIZE);
-    for(let i = 0; i < BLOCKSIZE; i++) result[i] = input[TAU[i]];
-
-    return result;
-}
+const P = (input: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
+    input[0], input[8], input[16], input[24], input[32], input[40], input[48], input[56],
+    input[1], input[9], input[17], input[25], input[33], input[41], input[49], input[57],
+    input[2], input[10], input[18], input[26], input[34], input[42], input[50], input[58],
+    input[3], input[11], input[19], input[27], input[35], input[43], input[51], input[59], 
+    input[4], input[12], input[20], input[28], input[36], input[44], input[52], input[60],
+    input[5], input[13], input[21], input[29], input[37], input[45], input[53], input[61],
+    input[6], input[14], input[22], input[30], input[38], input[46], input[54], input[62],
+    input[7], input[15], input[23], input[31], input[39], input[47], input[55], input[63]
+]);
 
 // Modificated MDS-matrix
 const A_init = new Uint32Array([

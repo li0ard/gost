@@ -1,5 +1,9 @@
+/**
+ * Implementation of GOST R 34.11-2012 ([RFC 6986](https://datatracker.ietf.org/doc/html/rfc6986.html)) "Streebog" hash function
+ * @module
+ */
 import { concatBytes, copyBytes, createHasher, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
-import { A, C, TAU } from "./const.js";
+import { A, C } from "./const.js";
 import { PI } from "../kuznyechik/const.js";
 import { pad1, xorBytes } from "../utils.js";
 import { numberToBytesBE } from "@noble/curves/utils.js";
@@ -37,17 +41,14 @@ const S = (input: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
 ]);
 
 const P = (input: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
-    input[TAU[0]], input[TAU[1]], input[TAU[2]], input[TAU[3]], input[TAU[4]], input[TAU[5]],
-    input[TAU[6]], input[TAU[7]], input[TAU[8]], input[TAU[9]], input[TAU[10]], input[TAU[11]],
-    input[TAU[12]], input[TAU[13]], input[TAU[14]], input[TAU[15]], input[TAU[16]], input[TAU[17]],
-    input[TAU[18]], input[TAU[19]], input[TAU[20]], input[TAU[21]], input[TAU[22]], input[TAU[23]],
-    input[TAU[24]], input[TAU[25]], input[TAU[26]], input[TAU[27]], input[TAU[28]], input[TAU[29]],
-    input[TAU[30]], input[TAU[31]], input[TAU[32]], input[TAU[33]], input[TAU[34]], input[TAU[35]],
-    input[TAU[36]], input[TAU[37]], input[TAU[38]], input[TAU[39]], input[TAU[40]], input[TAU[41]],
-    input[TAU[42]], input[TAU[43]], input[TAU[44]], input[TAU[45]], input[TAU[46]], input[TAU[47]],
-    input[TAU[48]], input[TAU[49]], input[TAU[50]], input[TAU[51]], input[TAU[52]], input[TAU[53]],
-    input[TAU[54]], input[TAU[55]], input[TAU[56]], input[TAU[57]], input[TAU[58]], input[TAU[59]],
-    input[TAU[60]], input[TAU[61]], input[TAU[62]], input[TAU[63]]
+    input[0], input[8], input[16], input[24], input[32], input[40], input[48], input[56],
+    input[1], input[9], input[17], input[25], input[33], input[41], input[49], input[57],
+    input[2], input[10], input[18], input[26], input[34], input[42], input[50], input[58],
+    input[3], input[11], input[19], input[27], input[35], input[43], input[51], input[59], 
+    input[4], input[12], input[20], input[28], input[36], input[44], input[52], input[60],
+    input[5], input[13], input[21], input[29], input[37], input[45], input[53], input[61],
+    input[6], input[14], input[22], input[30], input[38], input[46], input[54], input[62],
+    input[7], input[15], input[23], input[31], input[39], input[47], input[55], input[63]
 ]);
 
 const L = (input: TArg<Uint8Array>): TRet<Uint8Array> => {
@@ -171,11 +172,7 @@ abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
     }
 }
 
-/**
- * **Streebog-256 hash function**
- * 
- * Described by GOST R 34.11-2012 ([RFC 6986](https://datatracker.ietf.org/doc/html/rfc6986.html))
- */
+/** Streebog-256 hash function*/
 export class Streebog256 extends Streebog<Streebog256> {
     /** Streebog-256 (GOST R 34.11-2012) hash function */
     constructor() { super(false); }
@@ -192,11 +189,7 @@ export class Streebog256 extends Streebog<Streebog256> {
     }
 }
 
-/**
- * **Streebog-512 hash function**
- * 
- * Described by GOST R 34.11-2012 ([RFC 6986](https://datatracker.ietf.org/doc/html/rfc6986.html))
- */
+/** Streebog-512 hash function*/
 export class Streebog512 extends Streebog<Streebog512> {
     /** Streebog-512 (GOST R 34.11-2012) hash function */
     constructor() { super(true); }
@@ -213,15 +206,7 @@ export class Streebog512 extends Streebog<Streebog512> {
     }
 }
 
-/**
- * **Streebog-256 hash function**
- * 
- * Described by GOST R 34.11-2012 ([RFC 6986](https://datatracker.ietf.org/doc/html/rfc6986.html))
- */
+/** Streebog-256 hash function*/
 export const streebog256 = createHasher(Streebog256.create);
-/**
- * **Streebog-512 hash function**
- * 
- * Described by GOST R 34.11-2012 ([RFC 6986](https://datatracker.ietf.org/doc/html/rfc6986.html))
- */
+/** Streebog-512 hash function*/
 export const streebog512 = createHasher(Streebog512.create);
