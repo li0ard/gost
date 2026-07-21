@@ -1,3 +1,7 @@
+/**
+ * Implementation of ObjectIdentifier's (OID) registry for curves and hash algorithms
+ * @module
+ */
 import { CURVES, type GostCurveParameters } from "../gost3410/const.js";
 import { gost341194 } from "../gost341194/index.js";
 import { streebog256, streebog512 } from "../streebog/index.js";

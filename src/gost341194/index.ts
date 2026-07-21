@@ -1,3 +1,7 @@
+/**
+ * Implementation of GOST R 34.11-94 ([RFC 5831](https://datatracker.ietf.org/doc/html/rfc5831.html)) hash function
+ * @module
+ */
 import { concatBytes, copyBytes, createHasher, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { Magma } from "../magma/index.js";
 import { DSSZZI_UA_DKE_1, ID_GOSTR_3411_94_CRYPTOPRO_PARAM_SET } from "../magma/const.js";

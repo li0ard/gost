@@ -12,6 +12,7 @@ const _0100 = new Uint8Array([1,0]);
 const _36 = new Uint8Array(64).fill(0x36);
 const _5C = new Uint8Array(64).fill(0x5C);
 
+/** Key derivation function `KDF_GOSTR3411_2012_256 */
 export const kdf_gostr3411_2012_256 = (
     key: TArg<Uint8Array>,
     label: TArg<Uint8Array>,
@@ -21,6 +22,7 @@ export const kdf_gostr3411_2012_256 = (
     concatBytes(_1, label, _0, seed, _0100)
 );
 
+/** Key derivation function `KDF_TREE_GOSTR3411_2012_256 */
 export const kdf_tree_gostr3411_2012_256 = (
     key: TArg<Uint8Array>,
     label: TArg<Uint8Array>,
@@ -43,6 +45,7 @@ export const kdf_tree_gostr3411_2012_256 = (
     return keymat;
 }
 
+/** PBKDF2 over Streebog-256 */
 export const streebog256pbkdf2 = (
     password: TArg<Uint8Array>,
     salt: TArg<Uint8Array>,
@@ -50,6 +53,7 @@ export const streebog256pbkdf2 = (
     dkLen: number
 ): TRet<Uint8Array> => pbkdf2(streebog256, password, salt, { dkLen, c: iter });
 
+/** PBKDF2 over Streebog-512 */
 export const streebog512pbkdf2 = (
     password: TArg<Uint8Array>,
     salt: TArg<Uint8Array>,
@@ -57,6 +61,7 @@ export const streebog512pbkdf2 = (
     dkLen: number
 ): TRet<Uint8Array> => pbkdf2(streebog512, password, salt, { dkLen, c: iter });
 
+/** PBKDF2 over GOST R 34.11-94 */
 export const gost341194pbkdf2 = (
     password: TArg<Uint8Array>,
     salt: TArg<Uint8Array>,
@@ -64,6 +69,7 @@ export const gost341194pbkdf2 = (
     dkLen: number
 ): TRet<Uint8Array> => pbkdf2(gost341194, password, salt, { dkLen, c: iter });
 
+/** CryptoPro key derivation function (CPKDF) */
 export const cpkdf = (
     password: TArg<Uint8Array>,
     salt: TArg<Uint8Array>

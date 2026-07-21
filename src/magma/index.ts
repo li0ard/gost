@@ -1,3 +1,12 @@
+/**
+ * Implementation of GOST R 34.12-2015 ([RFC 8891](https://datatracker.ietf.org/doc/html/rfc8891.html)) and GOST 28147-89 ([RFC 5830](https://datatracker.ietf.org/doc/html/rfc5830.html))
+ * "Magma" block ciphers
+ * 
+ * Differences between GOST R 34.12-2015 and GOST 28147-89:
+ * - GOST R 34.12-2015 uses fixed S-Box (`ID_TC26_GOST_28147_PARAM_Z`)
+ * - GOST R 34.12-2015 uses BE byte order (instead of LE in GOST 28147-89)
+ * @module
+ */
 import { bytesToNumberBE, bytesToNumberLE, concatBytes, numberToBytesBE, numberToBytesLE, type TArg, type TRet } from "@noble/curves/utils.js";
 import { ID_TC26_GOST_28147_PARAM_Z, magmaKeySequences } from "./const.js";
 import type { Cipher } from "../types.js";
@@ -25,13 +34,7 @@ const extendKey = (key: TArg<Uint8Array>, sequence: number[], isLegacy: boolean)
     return new Uint32Array(sequence.map(i => chunks[i]));
 }
 
-/**
- * **Magma cipher**
- * 
- * Described by GOST 28147-89 ([RFC 5830](https://datatracker.ietf.org/doc/html/rfc5830.html)) in 1989 (Uses LE byte order, no S-Box'es defined)
- * 
- * Revised by GOST R 34.12-2015 ([RFC 8891](https://datatracker.ietf.org/doc/html/rfc8891.html)) in 2015 (Uses BE byte order and fixed {@link ID_TC26_GOST_28147_PARAM_Z S-Box})
- */
+/** Magma (GOST R 34.12-2015 and GOST 28147-89) cipher */
 export class Magma implements Cipher {
     public readonly keySize = 32;
     public readonly blockSize = BLOCKSIZE;
