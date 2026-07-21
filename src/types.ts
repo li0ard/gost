@@ -1,4 +1,5 @@
-import type { TArg, TRet } from "@noble/hashes/utils.js";
+import type { AffinePoint, WeierstrassPointCons } from "@noble/curves/abstract/weierstrass.js";
+import type { CHash, TArg, TRet } from "@noble/hashes/utils.js";
 
 export type CipherOrHashFunctionWrapper = (msg: TArg<Uint8Array>) => TRet<Uint8Array>;
 
@@ -56,4 +57,25 @@ export type WrapModeMagma = {
     wrap: (ukm: TArg<Uint8Array>, cek: TArg<Uint8Array>) => TRet<Uint8Array>;
     /** Unwrap encryption key */
     unwrap: (wrapped: TArg<Uint8Array>) => TRet<Uint8Array>;
+}
+
+/** Keypair generator */
+export type Keygen = (seed?: TArg<Uint8Array>, isCompressed?: boolean) => {
+    secretKey: TRet<Uint8Array>,
+    publicKey: TRet<Uint8Array>
+}
+
+/** GOST R 34.10 signer */
+export type Signer = {
+    getPublicKey: (secretKey: TArg<Uint8Array>, isCompressed?: boolean) => TRet<Uint8Array>;
+    sign: (secretKey: TArg<Uint8Array>, digest: TArg<Uint8Array>, rand?: TArg<Uint8Array>) => TRet<Uint8Array>;
+    verify: (publicKey: TArg<Uint8Array>, digest: TArg<Uint8Array>, signature: TArg<Uint8Array>) => boolean
+    keygen: Keygen,
+    getSharedSecret: (hash: CHash, secretKeyA: TArg<Uint8Array>, publicKeyB: TArg<Uint8Array>, ukm: TArg<Uint8Array>) => TRet<Uint8Array>
+    Point: WeierstrassPointCons<bigint>,
+    utils: {
+        uv2xy: (point: AffinePoint<bigint>) => AffinePoint<bigint>,
+        xy2uv: (point: AffinePoint<bigint>) => AffinePoint<bigint>,
+        swapPoint: (point: TArg<Uint8Array>) => TRet<Uint8Array>
+    }
 }

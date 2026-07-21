@@ -23,6 +23,7 @@ npm i @li0ard/gost
 - Curves and DSA (GOST R 34.10-2001 and GOST R 34.10-2012)
     - VKO key agreement function
     - Points conversion from Weierstrass to Twisted Edwards form and vice versa
+    - Various curves included (TK-26, CryptoPro, tests etc.)
 - GOST R 34.11-94 hash function
     - Supports HMAC and PBKDF2
 - Kuznyechik cipher (GOST R 34.12-2015)

@@ -1,6 +1,6 @@
 import { hexToBytes, type TArg, type TRet } from "@noble/curves/utils.js";
 import { describe, test, expect } from "bun:test";
-import { getPublicKey, ID_GOSTR3410_2001_PARAM_SET_CC, ID_GOSTR3410_2001_TEST_PARAM_SET, ID_GOSTR3410_2012_256_PARAM_SET_A, ID_GOSTR3410_2012_256_PARAM_SET_B, ID_GOSTR3410_2012_256_PARAM_SET_C, ID_GOSTR3410_2012_256_PARAM_SET_D, ID_GOSTR3410_2012_512_PARAM_SET_A, ID_GOSTR3410_2012_512_PARAM_SET_B, ID_GOSTR3410_2012_512_PARAM_SET_C, ID_GOSTR3410_2012_512_TEST_PARAM_SET, sign, verify, type GostCurveParameters } from ".";
+import { gost3410, ID_GOSTR3410_2001_PARAM_SET_CC, ID_GOSTR3410_2001_TEST_PARAM_SET, ID_GOSTR3410_2012_256_PARAM_SET_A, ID_GOSTR3410_2012_256_PARAM_SET_B, ID_GOSTR3410_2012_256_PARAM_SET_C, ID_GOSTR3410_2012_256_PARAM_SET_D, ID_GOSTR3410_2012_512_PARAM_SET_A, ID_GOSTR3410_2012_512_PARAM_SET_B, ID_GOSTR3410_2012_512_PARAM_SET_C, ID_GOSTR3410_2012_512_TEST_PARAM_SET, type GostCurveParameters } from ".";
 
 const performTest = (
     curve: GostCurveParameters,
@@ -10,11 +10,18 @@ const performTest = (
     expectedPk: TArg<Uint8Array>,
     expectedSign: TArg<Uint8Array>
 ) => {
-    const publicKey = getPublicKey(curve, privKey);
-    const signature = sign(curve, privKey, digest, rand);
+    const signer = gost3410(curve);
+    const publicKey = signer.getPublicKey(privKey, false);
+    const signature = signer.sign(privKey, digest, rand);
     expect(publicKey).toStrictEqual(expectedPk as TRet<Uint8Array>);
     expect(signature).toStrictEqual(expectedSign as TRet<Uint8Array>);
-    expect(verify(curve, publicKey, digest, expectedSign)).toBeTrue();
+    expect(signer.verify(publicKey, digest, expectedSign)).toBeTrue();
+    // Generate and verify deterministic signature
+    expect(signer.verify(
+        publicKey,
+        digest,
+        signer.sign(privKey, digest)
+    )).toBeTrue();
 }
 
 describe("[SIGN] GOST R 34.10-2001", () => {

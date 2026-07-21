@@ -1,6 +1,6 @@
 import { concatBytes, hexToBytes, type TArg } from "@noble/hashes/utils.js";
 import { test, expect } from "bun:test";
-import { getPublicKey, swapPoint, verify } from ".";
+import { gost3410 } from ".";
 import { AsnConvert, AsnProp, AsnPropTypes, OctetString } from "@peculiar/asn1-schema";
 import { Certificate } from "@peculiar/asn1-x509";
 import { getCurveByOid, getHashByOid } from "../oids";
@@ -25,29 +25,26 @@ const proceedCertitificate = (
     
     const curve = getCurveByOid(parameters.curve);
     if(!curve) throw new Error("Invalid curve parameters");
+    const signer = gost3410(curve);
 
     const digest = getHashByOid(parameters.digest);
     if(!digest) throw new Error("Invalid hash function");
 
     // Unfortunately, GOST doesn't have unificated serialization
-    const spk = swapPoint(
-        curve,
-        new Uint8Array(
-            AsnConvert.parse(parsed.tbsCertificate.subjectPublicKeyInfo.subjectPublicKey, OctetString).buffer
-        ).reverse()
-    );
+    const spk = signer.utils.swapPoint(new Uint8Array(
+        AsnConvert.parse(parsed.tbsCertificate.subjectPublicKeyInfo.subjectPublicKey, OctetString).buffer
+    ).reverse());
 
     if(checkPublicKey) {
-        const pk = getPublicKey(curve, privateKey);
+        const pk = signer.getPublicKey(privateKey, false);
         // Unfortunately, GOST doesn't have unificated serialization
         expect(pk.subarray(1)).toStrictEqual(spk);
     }
 
-    expect(verify(
-        curve,
+    expect(signer.verify(
         concatBytes(_4, spk),
         digest(new Uint8Array(parsed.tbsCertificateRaw!)).reverse(),
-        swapPoint(curve, new Uint8Array(parsed.signatureValue))
+        signer.utils.swapPoint(new Uint8Array(parsed.signatureValue))
     )).toBeTrue();
 }
 

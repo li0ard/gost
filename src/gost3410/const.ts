@@ -1,3 +1,21 @@
+/**
+ * Supported GOST R 34.10-2001/2012 curves:
+ * |                 Name                 |           Aliases           |                              OIDs                             |
+ * |:------------------------------------:|:---------------------------:|:-------------------------------------------------------------:|
+ * | ID_GOSTR3410_2001_PARAM_SET_CC       | CryptoCom param set         | 1.2.643.2.9.1.8.1                                             |
+ * | ID_GOSTR3410_2001_TEST_PARAM_SET     | -                           | 1.2.643.2.2.35.0                                              |
+ * | ID_GOSTR3410_2012_256_PARAM_SET_A    | -                           | 1.2.643.7.1.2.1.1.1                                           |
+ * | ID_GOSTR3410_2012_256_PARAM_SET_B    | CryptoPro A (X-A) param set | 1.2.643.7.1.2.1.1.2,<br>1.2.643.2.2.35.1,<br>1.2.643.2.2.36.0 |
+ * | ID_GOSTR3410_2012_256_PARAM_SET_C    | CryptoPro B param set       | 1.2.643.7.1.2.1.1.3,<br>1.2.643.2.2.35.2                      |
+ * | ID_GOSTR3410_2012_256_PARAM_SET_D    | CryptoPro C (X-B) param set | 1.2.643.7.1.2.1.1.4,<br>1.2.643.2.2.35.3,<br>1.2.643.2.2.36.1 |
+ * | ID_GOSTR3410_2012_512_TEST_PARAM_SET | -                           | 1.2.643.7.1.2.1.2.0                                           |
+ * | ID_GOSTR3410_2012_512_PARAM_SET_A    | -                           | 1.2.643.7.1.2.1.2.1                                           |
+ * | ID_GOSTR3410_2012_512_PARAM_SET_B    | -                           | 1.2.643.7.1.2.1.2.2                                           |
+ * | ID_GOSTR3410_2012_512_PARAM_SET_C    | -                           | 1.2.643.7.1.2.1.2.3                                           |
+ * 
+ * @module
+ */
+
 /** Parameters for GOST curves */
 export interface GostCurveParameters {
     /** Prime field (`Fp`) */
