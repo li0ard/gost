@@ -23,9 +23,8 @@ const proceedCertitificate = (
     const parsed = AsnConvert.parse(certificate, Certificate);
     const parameters = AsnConvert.parse(parsed.tbsCertificate.subjectPublicKeyInfo.algorithm.parameters!, PublicKeyParameters);
     
-    const curve = getCurveByOid(parameters.curve);
-    if(!curve) throw new Error("Invalid curve parameters");
-    const signer = gost3410(curve);
+    const signer = getCurveByOid(parameters.curve);
+    if(!signer) throw new Error("Invalid curve parameters");
 
     const digest = getHashByOid(parameters.digest);
     if(!digest) throw new Error("Invalid hash function");

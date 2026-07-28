@@ -2,10 +2,10 @@
  * Implementation of ObjectIdentifier's (OID) registry for curves and hash algorithms
  * @module
  */
-import { CURVES, type GostCurveParameters } from "../gost3410/const.js";
+import { CURVES } from "../gost3410/index.js";
 import { gost341194 } from "../gost341194/index.js";
 import { streebog256, streebog512 } from "../streebog/index.js";
-import type { CipherOrHashFunctionWrapper } from "../types.js";
+import type { CipherOrHashFunctionWrapper, Signer } from "../types.js";
 
 const HASHES_OID: Record<string, CipherOrHashFunctionWrapper> = {
     "1.2.643.7.1.1.2.1": gost341194,
@@ -14,9 +14,9 @@ const HASHES_OID: Record<string, CipherOrHashFunctionWrapper> = {
 }
 
 /** Get curve parameters by OID */
-export const getCurveByOid = (oid: string): GostCurveParameters | undefined => {
-    for (const [_, params] of Object.entries(CURVES))
-        if (params.oids?.includes(oid)) return params;
+export const getCurveByOid = (oid: string): Signer | undefined => {
+    for (const [_, c] of Object.entries(CURVES))
+        if (c.utils.parameters.oids?.includes(oid)) return c;
 }
 
 /** Get hash function by OID */

@@ -17,9 +17,9 @@
  * @module
  */
 import { bytesToNumberBE, concatBytes, numberToBytesBE, type TArg, type TRet, numberToBytesLE, type CHash, randomBytes, abytes } from "@noble/curves/utils.js";
-import type { GostCurveParameters } from "./const.js";
+import { type GostCurveParameters, ID_GOSTR3410_2001_PARAM_SET_CC, ID_GOSTR3410_2001_TEST_PARAM_SET, ID_GOSTR3410_2012_256_PARAM_SET_A, ID_GOSTR3410_2012_256_PARAM_SET_B, ID_GOSTR3410_2012_256_PARAM_SET_C, ID_GOSTR3410_2012_256_PARAM_SET_D, ID_GOSTR3410_2012_512_PARAM_SET_A, ID_GOSTR3410_2012_512_PARAM_SET_B, ID_GOSTR3410_2012_512_PARAM_SET_C, ID_GOSTR3410_2012_512_TEST_PARAM_SET } from "./const.js";
 import { getMinHashLength, mapHashToField, mod, type IField } from "@noble/curves/abstract/modular.js";
-import { weierstrass } from "@noble/curves/abstract/weierstrass.js";
+import { weierstrass, type WeierstrassPoint } from "@noble/curves/abstract/weierstrass.js";
 import { streebog256hmac, streebog512hmac } from "../hmac.js";
 import { createKeygen, type AffinePoint } from "@noble/curves/abstract/curve.js";
 import type { Signer } from "../types.js";
@@ -117,7 +117,7 @@ export const gost3410 = (parameters: GostCurveParameters): Signer => {
 
         const v = Fn.inv(e);
         const z1 = Fn.mul(s, v), z2 = Fn.mul(Fn.neg(r), v);
-        let P, Q;
+        let P: WeierstrassPoint<bigint>, Q: WeierstrassPoint<bigint>;
         try {
             P = BASE.multiply(z1);
             Q = Point.fromBytes(publicKey).multiply(z2);
@@ -188,7 +188,7 @@ export const gost3410 = (parameters: GostCurveParameters): Signer => {
         }
     }
 
-    const utils = Object.freeze({ uv2xy, xy2uv, swapPoint });
+    const utils = Object.freeze({ uv2xy, xy2uv, swapPoint, parameters });
 
     return Object.freeze({
         getPublicKey,
@@ -202,4 +202,31 @@ export const gost3410 = (parameters: GostCurveParameters): Signer => {
     });
 }
 
-export * from "./const.js";
+export type { GostCurveParameters } from "./const.js";
+/** GOST R 34.10-2001 CryptoCom curve */
+export const gost2001CC = gost3410(ID_GOSTR3410_2001_PARAM_SET_CC);
+/** GOST R 34.10-2001 test curve */
+export const gost2001Test = gost3410(ID_GOSTR3410_2001_TEST_PARAM_SET);
+/** GOST R 34.10-2012 256 bit `A` curve */
+export const gost256A = gost3410(ID_GOSTR3410_2012_256_PARAM_SET_A);
+/** GOST R 34.10-2012 256 bit `B` curve (aka CryptoPro `A` and `X-A`) */
+export const gost256B = gost3410(ID_GOSTR3410_2012_256_PARAM_SET_B);
+/** GOST R 34.10-2012 256 bit `C` curve (aka CryptoPro `B`) */
+export const gost256C = gost3410(ID_GOSTR3410_2012_256_PARAM_SET_C);
+/** GOST R 34.10-2012 256 bit `D` curve (aka CryptoPro `C` and `X-B`) */
+export const gost256D = gost3410(ID_GOSTR3410_2012_256_PARAM_SET_D);
+/** GOST R 34.10-2012 512 bit test curve */
+export const gost512Test = gost3410(ID_GOSTR3410_2012_512_TEST_PARAM_SET);
+/** GOST R 34.10-2012 512 bit `A` curve */
+export const gost512A = gost3410(ID_GOSTR3410_2012_512_PARAM_SET_A);
+/** GOST R 34.10-2012 512 bit `B` curve */
+export const gost512B = gost3410(ID_GOSTR3410_2012_512_PARAM_SET_B);
+/** GOST R 34.10-2012 512 bit `C` curve */
+export const gost512C = gost3410(ID_GOSTR3410_2012_512_PARAM_SET_C);
+
+/** Standard curves */
+export const CURVES = {
+    gost2001CC, gost2001Test,
+    gost256A, gost256B, gost256C, gost256D,
+    gost512Test, gost512A, gost512B, gost512C
+}

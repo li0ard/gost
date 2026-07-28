@@ -1,21 +1,3 @@
-/**
- * Supported GOST R 34.10-2001/2012 curves:
- * |                 Name                 |           Aliases           |                              OIDs                             |
- * |:------------------------------------:|:---------------------------:|:-------------------------------------------------------------:|
- * | ID_GOSTR3410_2001_PARAM_SET_CC       | CryptoCom param set         | 1.2.643.2.9.1.8.1                                             |
- * | ID_GOSTR3410_2001_TEST_PARAM_SET     | -                           | 1.2.643.2.2.35.0                                              |
- * | ID_GOSTR3410_2012_256_PARAM_SET_A    | -                           | 1.2.643.7.1.2.1.1.1                                           |
- * | ID_GOSTR3410_2012_256_PARAM_SET_B    | CryptoPro A (X-A) param set | 1.2.643.7.1.2.1.1.2,<br>1.2.643.2.2.35.1,<br>1.2.643.2.2.36.0 |
- * | ID_GOSTR3410_2012_256_PARAM_SET_C    | CryptoPro B param set       | 1.2.643.7.1.2.1.1.3,<br>1.2.643.2.2.35.2                      |
- * | ID_GOSTR3410_2012_256_PARAM_SET_D    | CryptoPro C (X-B) param set | 1.2.643.7.1.2.1.1.4,<br>1.2.643.2.2.35.3,<br>1.2.643.2.2.36.1 |
- * | ID_GOSTR3410_2012_512_TEST_PARAM_SET | -                           | 1.2.643.7.1.2.1.2.0                                           |
- * | ID_GOSTR3410_2012_512_PARAM_SET_A    | -                           | 1.2.643.7.1.2.1.2.1                                           |
- * | ID_GOSTR3410_2012_512_PARAM_SET_B    | -                           | 1.2.643.7.1.2.1.2.2                                           |
- * | ID_GOSTR3410_2012_512_PARAM_SET_C    | -                           | 1.2.643.7.1.2.1.2.3                                           |
- * 
- * @module
- */
-
 /** Parameters for GOST curves */
 export interface GostCurveParameters {
     /** Prime field (`Fp`) */
@@ -178,17 +160,4 @@ export const ID_GOSTR3410_2012_512_PARAM_SET_C: Readonly<GostCurveParameters> = 
     length: 64,
     st: [0x186c289cffa09c983b168c30c829006c952ff4aaf99c73850875d7e77bebef18d653187d6ba8fe533ec74c6f061872585b97cc0f50f57752cd73f4913304621en, 0x9a628f975594ecefd89ba28a2539ffb79c8ab238aeed0851fa5c1abb02b80b44c6734501b83a011dd625cd0b5145091a6d9acd4b1f5c5b1e21b2b249ddfd1271n],
     oids: ["1.2.643.7.1.2.1.2.3"]
-}
-
-export const CURVES = {
-    ID_GOSTR3410_2001_PARAM_SET_CC,
-    ID_GOSTR3410_2001_TEST_PARAM_SET,
-    ID_GOSTR3410_2012_256_PARAM_SET_A,
-    ID_GOSTR3410_2012_256_PARAM_SET_B,
-    ID_GOSTR3410_2012_256_PARAM_SET_C,
-    ID_GOSTR3410_2012_256_PARAM_SET_D,
-    ID_GOSTR3410_2012_512_TEST_PARAM_SET,
-    ID_GOSTR3410_2012_512_PARAM_SET_A,
-    ID_GOSTR3410_2012_512_PARAM_SET_B,
-    ID_GOSTR3410_2012_512_PARAM_SET_C
 }
