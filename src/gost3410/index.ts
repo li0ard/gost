@@ -20,9 +20,9 @@ import { bytesToNumberBE, concatBytes, numberToBytesBE, type TArg, type TRet, nu
 import { type GostCurveParameters, ID_GOSTR3410_2001_PARAM_SET_CC, ID_GOSTR3410_2001_TEST_PARAM_SET, ID_GOSTR3410_2012_256_PARAM_SET_A, ID_GOSTR3410_2012_256_PARAM_SET_B, ID_GOSTR3410_2012_256_PARAM_SET_C, ID_GOSTR3410_2012_256_PARAM_SET_D, ID_GOSTR3410_2012_512_PARAM_SET_A, ID_GOSTR3410_2012_512_PARAM_SET_B, ID_GOSTR3410_2012_512_PARAM_SET_C, ID_GOSTR3410_2012_512_TEST_PARAM_SET } from "./const.js";
 import { getMinHashLength, mapHashToField, mod, type IField } from "@noble/curves/abstract/modular.js";
 import { weierstrass, type WeierstrassPoint } from "@noble/curves/abstract/weierstrass.js";
-import { streebog256hmac, streebog512hmac } from "../hmac.js";
 import { createKeygen, type AffinePoint } from "@noble/curves/abstract/curve.js";
 import type { Signer } from "../types.js";
+import { streebogHmacDrbg } from "./drbg.js";
 
 const getWLengths = <T>(Fp: TArg<IField<T>>, Fn: TArg<IField<bigint>>) => ({
     secretKey: Fn.BYTES,
@@ -62,24 +62,22 @@ export const gost3410 = (parameters: GostCurveParameters): Signer => {
      * 
      * ```
      * sign(d, m) where
+     *   e = m mod n (if e=0, let e=1)
      *   k = streebog_hmac_drbg(d, m)
      *   (x, y) = G × k
      *   r = x mod n
-     *   s = (rd + km) mod n
+     *   s = (rd + ke) mod n
      * ```
      */
     const sign = (secretKey: TArg<Uint8Array>, digest: TArg<Uint8Array>, rand?: TArg<Uint8Array>) => {
         const e = mod(bytesToNumberBE(digest), Fn.ORDER) || 1n;
         const d = Fn.fromBytes(secretKey);
         if(!Fn.isValidNot0(d)) throw new Error("Invalid private key");
-        const hmac = parameters.length == 32 ? streebog256hmac : streebog512hmac;
 
         const k = rand
             ? mod(bytesToNumberBE(rand), Fn.ORDER)
-            : mod(
-                bytesToNumberBE(hmac(secretKey, digest)),
-                Fn.ORDER - 1n
-            ) + 1n;
+            : streebogHmacDrbg(Fn, d, digest);
+        if(rand && k == 0n) throw new Error("Invalid rand specified");
 
         const r = mod(BASE.multiply(k).x, Fn.ORDER),
             s = Fn.add(Fn.mul(r, d), Fn.mul(k, e));
