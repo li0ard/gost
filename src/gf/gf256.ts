@@ -1,27 +1,3 @@
-/*// Precompute GF(256) multiply table
-const gf256Multiply_slow = (a: number, b: number): number => {
-    let result = 0, high_bit: number;
-    for(let _ = 0; _ < 8; _++) {
-        if((b & 1) === 1) result ^= a;
-        high_bit = a & 0x80;
-        a <<= 1;
-        if(high_bit == 0x80) a ^= 0xC3;
-        b >>= 1;
-    }
-
-    return result & 0xFF;
-}
-
-const gen_mul_tables = () => {
-    let c = 1;
-
-    for (let i = 0; i < 256; i++) {
-        gf_multtable_log[c] = i;
-        gf_multtable_exp[i] = c;
-        c = gfMultiply_slow(c, 3);
-    }
-}*/
-
 const gf_multtable_exp = new Uint8Array([
     0x01, 0x03, 0x05, 0x0F, 0x11, 0x33, 0x55, 0xFF, 0xC2, 0x85, 0x4C, 0xD4, 0xBF, 0x02, 0x06, 0x0A,
     0x1E, 0x22, 0x66, 0xAA, 0x3D, 0x47, 0xC9, 0x98, 0x6B, 0xBD, 0x04, 0x0C, 0x14, 0x3C, 0x44, 0xCC,
