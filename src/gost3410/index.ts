@@ -24,12 +24,13 @@ import { createKeygen, type AffinePoint } from "@noble/curves/abstract/curve.js"
 import type { Signer } from "../types.js";
 import { streebogHmacDrbg } from "./drbg.js";
 
-const getWLengths = <T>(Fp: TArg<IField<T>>, Fn: TArg<IField<bigint>>) => ({
+const getWLengths = <T>(Fp: TArg<IField<T>>, Fn: TArg<IField<bigint>>) => Object.freeze({
     secretKey: Fn.BYTES,
     publicKey: 1 + Fp.BYTES,
     publicKeyUncompressed: 1 + 2 * Fp.BYTES,
     publicKeyHasPrefix: true,
     signature: 2 * Fn.BYTES,
+    seed: Math.max(getMinHashLength(Fn.ORDER), 16)
 });
 
 /** Swap `x` and `y` in point bytes */
@@ -42,10 +43,7 @@ const swapPoint = (point: TArg<Uint8Array>): TRet<Uint8Array> => concatBytes(
 export const gost3410 = (parameters: GostCurveParameters): Signer => {
     const Point = weierstrass(parameters);
     const { Fp, Fn, BASE } = Point;
-
-    const lengths = Object.assign(getWLengths(Fp, Fn), {
-        seed: Math.max(getMinHashLength(Fn.ORDER), 16),
-    });
+    const lengths = getWLengths(Fp, Fn);
 
     /**
      * Computes public key for a secret key. Checks for validity of the secret key.
@@ -93,7 +91,8 @@ export const gost3410 = (parameters: GostCurveParameters): Signer => {
      * 
      * ```
      * verify(P, m, r, s) where
-     *   v = m^-1 mod n
+     *   e = m mod n (if e=0, let e=1)
+     *   v = e^-1 mod n
      *   z1 = sv mod n
      *   z2 = -rv mod n
      *   R = (z1 × G + z2 × P).x mod n
@@ -108,20 +107,23 @@ export const gost3410 = (parameters: GostCurveParameters): Signer => {
         if(signature.length != lengths.signature) throw new Error("Invalid signature");
 
         const r = bytesToNumberBE(signature.subarray(0, parameters.length)),
-        s = bytesToNumberBE(signature.subarray(parameters.length));
+            s = bytesToNumberBE(signature.subarray(parameters.length));
         if(!Fn.isValidNot0(r) || !Fn.isValidNot0(s)) return false;
 
         const e = mod(bytesToNumberBE(digest), Fn.ORDER) || 1n;
-
         const v = Fn.inv(e);
         const z1 = Fn.mul(s, v), z2 = Fn.mul(Fn.neg(r), v);
-        let P: WeierstrassPoint<bigint>, Q: WeierstrassPoint<bigint>;
+
+        // TODO: Migrate to `mulAddUnsafe` (performs `R = a*G + b*Q` faster)
+        // when @noble/curve update will be released
+        let R: WeierstrassPoint<bigint>;
         try {
-            P = BASE.multiply(z1);
-            Q = Point.fromBytes(publicKey).multiply(z2);
+            R = BASE.multiplyUnsafe(z1).add(
+                Point.fromBytes(publicKey).multiplyUnsafe(z2)
+            );
         } catch { return false; }
 
-        return mod(P.add(Q).x, Fn.ORDER) === r;
+        return mod(R.x, Fn.ORDER) === r;
     }
 
     /**
@@ -147,13 +149,13 @@ export const gost3410 = (parameters: GostCurveParameters): Signer => {
         ));
     }
 
-    const randomSecretKey = (seed?: TArg<Uint8Array>): TRet<Uint8Array> => mapHashToField(
-        abytes(seed ?? randomBytes(lengths.seed), lengths.seed, 'seed'), 
-        Fn.ORDER
+    const keygen = createKeygen(
+        (seed?: TArg<Uint8Array>) => mapHashToField(
+            abytes(seed ?? randomBytes(lengths.seed), lengths.seed, 'seed'), 
+            Fn.ORDER
+        ),
+        getPublicKey
     );
-
-    const keygen = createKeygen(randomSecretKey, getPublicKey);
-    Object.freeze(lengths);
 
     const computeST = (): bigint[] => {
         if(!parameters.e || !parameters.d) throw new Error("No Twisted Edwards parameters");
