@@ -15,14 +15,20 @@ import { createView } from "@noble/hashes/utils.js";
 const BLOCKSIZE = 8;
 
 const G = (v: number, sbox: TArg<Uint8Array>): number => {
-    const t = (sbox[(v & 0x0f)] << 0) |
-        (sbox[16 + ((v >> 4) & 0x0f)] << 4) |
-        (sbox[32 + ((v >> 8) & 0x0f)] << 8) |
-        (sbox[48 + ((v >> 12) & 0x0f)] << 12) |
-        (sbox[64 + ((v >> 16) & 0x0f)] << 16) |
-        (sbox[80 + ((v >> 20) & 0x0f)] << 20) |
-        (sbox[96 + ((v >> 24) & 0x0f)] << 24) |
-        (sbox[112 + ((v >> 28) & 0x0f)] << 28);
+    const nibble = (r: number, i: number): number => {
+        const b = sbox[r + (i >> 1)];
+        return (i & 1) == 0 ? (b >>> 4) : (b & 0x0f);
+    }
+
+    const t = (nibble(0, v & 0x0f) << 0) |
+        (nibble(8, (v >> 4) & 0x0f) << 4) |
+        (nibble(16, (v >> 8) & 0x0f) << 8) |
+        (nibble(24, (v >> 12) & 0x0f) << 12) |
+        (nibble(32, (v >> 16) & 0x0f) << 16) |
+        (nibble(40, (v >> 20) & 0x0f) << 20) |
+        (nibble(48, (v >> 24) & 0x0f) << 24) |
+        (nibble(56, (v >> 28) & 0x0f) << 28);
+
     return ((t << 11) | (t >>> 21)) >>> 0;
 }
 
