@@ -1,4 +1,4 @@
-import { type TArg, type TRet } from "@noble/hashes/utils.js";
+import type { TArg, TRet } from "@noble/hashes/utils.js";
 import { _HMAC } from "@noble/hashes/hmac.js";
 import { streebog256, streebog512 } from "./streebog/index.js";
 import { gost341194 } from "./gost341194/index.js";
