@@ -11,27 +11,25 @@
  * - Reverse digest
  * - Reverse/swap public key
  * 
- * Unfortunately, GOST doesn't unify serialization
+ * Unfortunately, GOST doesn't unify serialization, this realization serialize as in standard
  * 
  * API is close to `@noble/curves`
  * @module
  */
 import { bytesToNumberBE, concatBytes, numberToBytesBE, type TArg, type TRet, numberToBytesLE, type CHash, randomBytes, abytes } from "@noble/curves/utils.js";
-import { type GostCurveParameters, ID_GOSTR3410_2001_PARAM_SET_CC, ID_GOSTR3410_2001_TEST_PARAM_SET, ID_GOSTR3410_2012_256_PARAM_SET_A, ID_GOSTR3410_2012_256_PARAM_SET_B, ID_GOSTR3410_2012_256_PARAM_SET_C, ID_GOSTR3410_2012_256_PARAM_SET_D, ID_GOSTR3410_2012_512_PARAM_SET_A, ID_GOSTR3410_2012_512_PARAM_SET_B, ID_GOSTR3410_2012_512_PARAM_SET_C, ID_GOSTR3410_2012_512_TEST_PARAM_SET } from "./const.js";
-import { getMinHashLength, mapHashToField, mod, type IField } from "@noble/curves/abstract/modular.js";
-import { weierstrass, type WeierstrassPoint } from "@noble/curves/abstract/weierstrass.js";
+import {
+    type GostCurveParameters,
+    ID_GOSTR3410_2001_PARAM_SET_CC, ID_GOSTR3410_2001_TEST_PARAM_SET,
+    ID_GOSTR3410_2012_256_PARAM_SET_A, ID_GOSTR3410_2012_256_PARAM_SET_B,
+    ID_GOSTR3410_2012_256_PARAM_SET_C, ID_GOSTR3410_2012_256_PARAM_SET_D,
+    ID_GOSTR3410_2012_512_PARAM_SET_A, ID_GOSTR3410_2012_512_PARAM_SET_B,
+    ID_GOSTR3410_2012_512_PARAM_SET_C, ID_GOSTR3410_2012_512_TEST_PARAM_SET
+} from "./const.js";
+import { getMinHashLength, mapHashToField, mod } from "@noble/curves/abstract/modular.js";
+import { weierstrass } from "@noble/curves/abstract/weierstrass.js";
 import { createKeygen, type AffinePoint } from "@noble/curves/abstract/curve.js";
 import type { Signer } from "../types.js";
 import { streebogHmacDrbg } from "./drbg.js";
-
-const getWLengths = <T>(Fp: TArg<IField<T>>, Fn: TArg<IField<bigint>>) => Object.freeze({
-    secretKey: Fn.BYTES,
-    publicKey: 1 + Fp.BYTES,
-    publicKeyUncompressed: 1 + 2 * Fp.BYTES,
-    publicKeyHasPrefix: true,
-    signature: 2 * Fn.BYTES,
-    seed: Math.max(getMinHashLength(Fn.ORDER), 16)
-});
 
 /** Swap `x` and `y` in point bytes */
 const swapPoint = (point: TArg<Uint8Array>): TRet<Uint8Array> => concatBytes(
@@ -43,7 +41,14 @@ const swapPoint = (point: TArg<Uint8Array>): TRet<Uint8Array> => concatBytes(
 export const gost3410 = (parameters: GostCurveParameters): Signer => {
     const Point = weierstrass(parameters);
     const { Fp, Fn, BASE } = Point;
-    const lengths = getWLengths(Fp, Fn);
+    const lengths = Object.freeze({
+        secretKey: Fn.BYTES,
+        publicKey: 1 + Fp.BYTES,
+        publicKeyUncompressed: 1 + 2 * Fp.BYTES,
+        publicKeyHasPrefix: true,
+        signature: 2 * Fn.BYTES,
+        seed: Math.max(getMinHashLength(Fn.ORDER), 16)
+    });
 
     /**
      * Computes public key for a secret key. Checks for validity of the secret key.
@@ -116,14 +121,10 @@ export const gost3410 = (parameters: GostCurveParameters): Signer => {
 
         // TODO: Migrate to `mulAddUnsafe` (performs `R = a*G + b*Q` faster)
         // when @noble/curve update will be released
-        let R: WeierstrassPoint<bigint>;
         try {
-            R = BASE.multiplyUnsafe(z1).add(
-                Point.fromBytes(publicKey).multiplyUnsafe(z2)
-            );
+            const R = BASE.multiplyUnsafe(z1).add(Point.fromBytes(publicKey).multiplyUnsafe(z2));
+            return mod(R.x, Fn.ORDER) === r;
         } catch { return false; }
-
-        return mod(R.x, Fn.ORDER) === r;
     }
 
     /**
