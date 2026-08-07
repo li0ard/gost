@@ -1,8 +1,8 @@
 import { hexToBytes } from "@noble/curves/utils.js";
 import { describe, test, expect } from "bun:test";
-import { gost2001Test, gost512A } from ".";
-import { gost341194 } from "../gost341194";
-import { streebog256, streebog512 } from "../streebog";
+import { gost2001Test, gost512A } from "./index.js";
+import { gost341194 } from "../gost341194/index.js";
+import { streebog256, streebog512 } from "../streebog/index.js";
 
 test("[SIGN] VKO 2001", () => {
     const ukm = hexToBytes("5172be25f852a233").reverse();

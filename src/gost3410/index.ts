@@ -25,11 +25,11 @@ import {
     ID_GOSTR3410_2012_512_PARAM_SET_A, ID_GOSTR3410_2012_512_PARAM_SET_B,
     ID_GOSTR3410_2012_512_PARAM_SET_C, ID_GOSTR3410_2012_512_TEST_PARAM_SET
 } from "./const.js";
-import { getMinHashLength, mapHashToField, mod } from "@noble/curves/abstract/modular.js";
+import { getMinHashLength, mapHashToField } from "@noble/curves/abstract/modular.js";
 import { weierstrass } from "@noble/curves/abstract/weierstrass.js";
 import { createKeygen, type AffinePoint } from "@noble/curves/abstract/curve.js";
 import type { Signer } from "../types.js";
-import { streebogHmacDrbg } from "./drbg.js";
+import { createStreebogHmacDrbg } from "./drbg.js";
 
 /** Swap `x` and `y` in point bytes */
 const swapPoint = (point: TArg<Uint8Array>): TRet<Uint8Array> => concatBytes(
@@ -49,6 +49,10 @@ export const gost3410 = (parameters: GostCurveParameters): Signer => {
         signature: 2 * Fn.BYTES,
         seed: Math.max(getMinHashLength(Fn.ORDER), 16)
     });
+    const drbg = createStreebogHmacDrbg(Point.Fn);
+
+    const prepareHash = (digest: TArg<Uint8Array>): bigint => 
+        Fn.create(bytesToNumberBE(digest)) || 1n;
 
     /**
      * Computes public key for a secret key. Checks for validity of the secret key.
@@ -69,21 +73,18 @@ export const gost3410 = (parameters: GostCurveParameters): Signer => {
      *   k = streebog_hmac_drbg(d, m)
      *   (x, y) = G × k
      *   r = x mod n
-     *   s = (rd + ke) mod n
+     *   s = (r ⋅ d + k ⋅ e) mod n
      * ```
      */
     const sign = (secretKey: TArg<Uint8Array>, digest: TArg<Uint8Array>, rand?: TArg<Uint8Array>) => {
-        const e = mod(bytesToNumberBE(digest), Fn.ORDER) || 1n;
         const d = Fn.fromBytes(secretKey);
         if(!Fn.isValidNot0(d)) throw new Error("Invalid private key");
 
-        const k = rand
-            ? mod(bytesToNumberBE(rand), Fn.ORDER)
-            : streebogHmacDrbg(Fn, d, digest);
+        const k = rand ? Fn.create(bytesToNumberBE(rand)) : drbg(d, digest);
         if(rand && k == 0n) throw new Error("Invalid rand specified");
 
-        const r = mod(BASE.multiply(k).x, Fn.ORDER),
-            s = Fn.add(Fn.mul(r, d), Fn.mul(k, e));
+        const r = Fn.create(BASE.multiply(k).x),
+            s = Fn.add(Fn.mul(r, d), Fn.mul(k, prepareHash(digest)));
 
         return concatBytes(
             numberToBytesBE(r, parameters.length),
@@ -98,8 +99,8 @@ export const gost3410 = (parameters: GostCurveParameters): Signer => {
      * verify(P, m, r, s) where
      *   e = m mod n (if e=0, let e=1)
      *   v = e^-1 mod n
-     *   z1 = sv mod n
-     *   z2 = -rv mod n
+     *   z1 = s ⋅ v mod n
+     *   z2 = -r ⋅ v mod n
      *   R = (z1 × G + z2 × P).x mod n
      *   R == r
      * ```
@@ -115,15 +116,12 @@ export const gost3410 = (parameters: GostCurveParameters): Signer => {
             s = bytesToNumberBE(signature.subarray(parameters.length));
         if(!Fn.isValidNot0(r) || !Fn.isValidNot0(s)) return false;
 
-        const e = mod(bytesToNumberBE(digest), Fn.ORDER) || 1n;
-        const v = Fn.inv(e);
+        const v = Fn.inv(prepareHash(digest));
         const z1 = Fn.mul(s, v), z2 = Fn.mul(Fn.neg(r), v);
 
-        // TODO: Migrate to `mulAddUnsafe` (performs `R = a*G + b*Q` faster)
-        // when @noble/curve update will be released
         try {
-            const R = BASE.multiplyUnsafe(z1).add(Point.fromBytes(publicKey).multiplyUnsafe(z2));
-            return mod(R.x, Fn.ORDER) === r;
+            const R = BASE.mulAddUnsafe(z1, Point.fromBytes(publicKey), z2);
+            return Fn.create(R.x) === r;
         } catch { return false; }
     }
 

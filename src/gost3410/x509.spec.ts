@@ -1,9 +1,8 @@
 import { concatBytes, hexToBytes, type TArg } from "@noble/hashes/utils.js";
 import { test, expect } from "bun:test";
-import { gost3410 } from ".";
 import { AsnConvert, AsnProp, AsnPropTypes, OctetString } from "@peculiar/asn1-schema";
 import { Certificate } from "@peculiar/asn1-x509";
-import { getCurveByOid, getHashByOid } from "../oids";
+import { getCurveByOid, getHashByOid } from "../oids/index.js";
 
 class PublicKeyParameters {
     @AsnProp({ type: AsnPropTypes.ObjectIdentifier })

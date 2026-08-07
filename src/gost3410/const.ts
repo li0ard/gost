@@ -1,19 +1,7 @@
+import type { WeierstrassOpts } from "@noble/curves/abstract/weierstrass.js";
+
 /** Parameters for GOST curves */
-export interface GostCurveParameters {
-    /** Prime field (`Fp`) */
-    p: bigint;
-    /** Curve order (`Fn`) */
-    n: bigint;
-    /** Param `a` */
-    a: bigint;
-    /** Param `b` */
-    b: bigint;
-    /** Base point `X` coordinate */
-    Gx: bigint;
-    /** Base point `Y` coordinate */
-    Gy: bigint;
-    /** Cofactor */
-    h: bigint;
+export interface GostCurveParameters extends WeierstrassOpts<bigint> {
     /** Curve point length */
     length: number
     /** Param `e` (`a`) for representation as Twisted Edwards */
