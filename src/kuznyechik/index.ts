@@ -88,30 +88,30 @@ export class Kuznyechik implements Cipher {
             temp3 = new Uint8Array(this.blockSize),
             temp4 = new Uint8Array(this.blockSize);
         for (let i = 0; i < 4; i++) {
-            const baseIndex = i * 8;
+            const baseIndex = i * 128;
         
-            temp3 = F(temp1, temp2, ITER[baseIndex]);
+            temp3 = F(temp1, temp2, ITER.subarray(baseIndex, baseIndex + 16));
             temp4 = copyBytes(temp1);
         
-            temp1 = F(temp3, temp4, ITER[baseIndex + 1]);
+            temp1 = F(temp3, temp4, ITER.subarray(baseIndex + 16, baseIndex + 32));
             temp2 = copyBytes(temp3);
         
-            temp3 = F(temp1, temp2, ITER[baseIndex + 2]);
+            temp3 = F(temp1, temp2, ITER.subarray(baseIndex + 32, baseIndex + 48));
             temp4 = copyBytes(temp1);
         
-            temp1 = F(temp3, temp4, ITER[baseIndex + 3]);
+            temp1 = F(temp3, temp4, ITER.subarray(baseIndex + 48, baseIndex + 64));
             temp2 = copyBytes(temp3);
         
-            temp3 = F(temp1, temp2, ITER[baseIndex + 4]);
+            temp3 = F(temp1, temp2, ITER.subarray(baseIndex + 64, baseIndex + 80));
             temp4 = copyBytes(temp1);
         
-            temp1 = F(temp3, temp4, ITER[baseIndex + 5]);
+            temp1 = F(temp3, temp4, ITER.subarray(baseIndex + 80, baseIndex + 96));
             temp2 = copyBytes(temp3);
         
-            temp3 = F(temp1, temp2, ITER[baseIndex + 6]);
+            temp3 = F(temp1, temp2, ITER.subarray(baseIndex + 96, baseIndex + 112));
             temp4 = copyBytes(temp1);
         
-            temp1 = F(temp3, temp4, ITER[baseIndex + 7]);
+            temp1 = F(temp3, temp4, ITER.subarray(baseIndex + 112, baseIndex + 128));
             temp2 = copyBytes(temp3);
         
             roundKeys[2 + 2 * i] = copyBytes(temp1);
