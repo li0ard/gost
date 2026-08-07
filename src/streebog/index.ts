@@ -79,21 +79,18 @@ const LPS = (input: TArg<Uint8Array>): TRet<Uint8Array> => L(P(S(input)));
 const E = (block: TArg<Uint8Array>, keys: TArg<Uint8Array>): TRet<Uint8Array> => {
     // block will be mutated
     let c = xorBytes(block, keys);
-    /*for (let i = 0; i < 12; i++) {
-        block = LPS(xorBytes(block, C[i])); c = xorBytes(LPS(c), block);
-    }*/
-    block = LPS(xorBytes(block, C[0])); c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C[1])); c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C[2])); c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C[3])); c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C[4])); c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C[5])); c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C[6])); c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C[7])); c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C[8])); c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C[9])); c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C[10])); c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C[11])); c = xorBytes(LPS(c), block);
+    block = LPS(xorBytes(block, C.subarray(0, 64))); c = xorBytes(LPS(c), block);
+    block = LPS(xorBytes(block, C.subarray(64, 128))); c = xorBytes(LPS(c), block);
+    block = LPS(xorBytes(block, C.subarray(128, 192))); c = xorBytes(LPS(c), block);
+    block = LPS(xorBytes(block, C.subarray(192, 256))); c = xorBytes(LPS(c), block);
+    block = LPS(xorBytes(block, C.subarray(256, 320))); c = xorBytes(LPS(c), block);
+    block = LPS(xorBytes(block, C.subarray(320, 384))); c = xorBytes(LPS(c), block);
+    block = LPS(xorBytes(block, C.subarray(384, 448))); c = xorBytes(LPS(c), block);
+    block = LPS(xorBytes(block, C.subarray(448, 512))); c = xorBytes(LPS(c), block);
+    block = LPS(xorBytes(block, C.subarray(512, 576))); c = xorBytes(LPS(c), block);
+    block = LPS(xorBytes(block, C.subarray(576, 640))); c = xorBytes(LPS(c), block);
+    block = LPS(xorBytes(block, C.subarray(640, 704))); c = xorBytes(LPS(c), block);
+    block = LPS(xorBytes(block, C.subarray(704, 768))); c = xorBytes(LPS(c), block);
 
     return c;
 }
