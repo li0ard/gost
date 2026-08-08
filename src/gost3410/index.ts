@@ -28,7 +28,7 @@ import {
 import { getMinHashLength, mapHashToField } from "@noble/curves/abstract/modular.js";
 import { weierstrass } from "@noble/curves/abstract/weierstrass.js";
 import { createKeygen, type AffinePoint } from "@noble/curves/abstract/curve.js";
-import type { Signer } from "../types.js";
+import type { Signer, SignOpts } from "../types.js";
 import { createStreebogHmacDrbg } from "./drbg.js";
 
 /** Swap `x` and `y` in point bytes */
@@ -76,11 +76,12 @@ export const gost3410 = (parameters: GostCurveParameters): Signer => {
      *   s = (r ⋅ d + k ⋅ e) mod n
      * ```
      */
-    const sign = (secretKey: TArg<Uint8Array>, digest: TArg<Uint8Array>, rand?: TArg<Uint8Array>) => {
+    const sign = (secretKey: TArg<Uint8Array>, digest: TArg<Uint8Array>, opts?: SignOpts) => {
+        const { rand, extraEntropy } = opts ?? {};
         const d = Fn.fromBytes(secretKey);
         if(!Fn.isValidNot0(d)) throw new Error("Invalid private key");
 
-        const k = rand ? Fn.create(bytesToNumberBE(rand)) : drbg(d, digest);
+        const k = rand ? Fn.create(bytesToNumberBE(rand)) : drbg(d, digest, extraEntropy);
         if(rand && k == 0n) throw new Error("Invalid rand specified");
 
         const r = Fn.create(BASE.multiply(k).x),

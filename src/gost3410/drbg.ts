@@ -1,5 +1,5 @@
 import type { IField } from "@noble/curves/abstract/modular.js";
-import { bytesToNumberBE, numberToBytesBE, type TArg } from "@noble/curves/utils.js";
+import { bytesToNumberBE, numberToBytesBE, randomBytes, type TArg } from "@noble/curves/utils.js";
 import { concatBytes } from "@noble/hashes/utils.js";
 import { streebog256hmac, streebog512hmac } from "../hmac.js";
 
@@ -7,6 +7,9 @@ const zero = new Uint8Array([0x00]), one = new Uint8Array([0x01]);
 
 /** 
  * Crates minimal HMAC-DRBG from RFC 6979 for GOST curves
+ * 
+ * Supports Hedged signatures, technique described in RFC 6979 section 3.6,
+ * a.k.a. adding randomness in deterministic signature
  * 
  * Uses HMAC over Streebog-256 for 256 bit curves and HMAC overStreebog-512 for 512 curves
  */
@@ -25,14 +28,18 @@ export const createStreebogHmacDrbg = (Fn: TArg<IField<bigint>>) => {
         return x;
     }
 
-    return (privateKey: bigint, digest: TArg<Uint8Array>): bigint => {
-        const x = numberToBytesBE(privateKey, Fn.BYTES),
-        h1 = numberToBytesBE(Fn.create(bits2int(digest)), Fn.BYTES);
+    return (privateKey: bigint, digest: TArg<Uint8Array>, extraEntropy?: boolean): bigint => {
+        const seedArgs: Uint8Array[] = [
+            numberToBytesBE(privateKey, Fn.BYTES),
+            numberToBytesBE(Fn.create(bits2int(digest)), Fn.BYTES)
+        ];
+        if(extraEntropy) seedArgs.push(randomBytes(Fn.BYTES));
+        const seed = concatBytes(...seedArgs);
 
         let V = new Uint8Array(Fn.BYTES).fill(0x01), K = new Uint8Array(Fn.BYTES);
-        K = hmac(K, concatBytes(V, zero, x, h1));
+        K = hmac(K, concatBytes(V, zero, seed));
         V = hmac(K, V);
-        K = hmac(K, concatBytes(V, one, x, h1));
+        K = hmac(K, concatBytes(V, one, seed));
         V = hmac(K, V);
 
         while (true) {

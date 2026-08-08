@@ -66,18 +66,71 @@ export type Keygen = (seed?: TArg<Uint8Array>, isCompressed?: boolean) => {
     publicKey: TRet<Uint8Array>;
 }
 
+/** 
+ * - `extraEntropy` - Creates signatures with increased security (Adding randomness to deterministic generator)
+ * - `rand` - Specify custom ephemeral key **(DO NOT USE IN PRODUCTION)**
+ */
+export type SignOpts = {
+    rand?: TArg<Uint8Array>;
+    extraEntropy?: boolean;
+}
+
 /** GOST R 34.10 signer */
 export type Signer = {
+    /**
+     * Computes public key for a secret key. Checks for validity of the secret key.
+     * @param isCompressed - whether to return compact (default), or full key
+     * @returns Public key, full when `isCompressed=false`; short when `isCompressed=true`
+     */
     getPublicKey: (secretKey: TArg<Uint8Array>, isCompressed?: boolean) => TRet<Uint8Array>;
-    sign: (secretKey: TArg<Uint8Array>, digest: TArg<Uint8Array>, rand?: TArg<Uint8Array>) => TRet<Uint8Array>;
+    /**
+     * Signs a message hash with a secret key.
+     * 
+     * ```
+     * sign(d, m) where
+     *   e = m mod n (if e=0, let e=1)
+     *   k = streebog_hmac_drbg(d, m)
+     *   (x, y) = G × k
+     *   r = x mod n
+     *   s = (r ⋅ d + k ⋅ e) mod n
+     * ```
+     */
+    sign: (secretKey: TArg<Uint8Array>, digest: TArg<Uint8Array>, opts?: SignOpts) => TRet<Uint8Array>;
+    /**
+     * Verifies a signature against message hash and public key.
+     * 
+     * ```
+     * verify(P, m, r, s) where
+     *   e = m mod n (if e=0, let e=1)
+     *   v = e^-1 mod n
+     *   z1 = s ⋅ v mod n
+     *   z2 = -r ⋅ v mod n
+     *   R = (z1 × G + z2 × P).x mod n
+     *   R == r
+     * ```
+     */
     verify: (publicKey: TArg<Uint8Array>, digest: TArg<Uint8Array>, signature: TArg<Uint8Array>) => boolean;
+    /** Keypair generator */
     keygen: Keygen;
+    /**
+     * Key agreement function (ECDH)
+     * 
+     * Computes hashed shared point from secret key A and public key B.
+     * @param hash Hash function to use (GOST R 34.11-94, Streebog-256, Streebog-512)
+     * @param ukm User keying material (aka salt, VKO-factor)
+     */
     getSharedSecret: (hash: CHash, secretKeyA: TArg<Uint8Array>, publicKeyB: TArg<Uint8Array>, ukm: TArg<Uint8Array>) => TRet<Uint8Array>;
+    /** Constructor and metadata helpers for Weierstrass points */
     Point: WeierstrassPointCons<bigint>;
+    /** Utils */
     utils: {
+        /** Convert point from Twisted Edwards to Weierstrass (if supported) */
         uv2xy: (point: AffinePoint<bigint>) => AffinePoint<bigint>;
+        /** Convert point from Weierstrass to Twisted Edwards (if supported) */
         xy2uv: (point: AffinePoint<bigint>) => AffinePoint<bigint>;
+        /** Swap `x` and `y` in uncompressed point bytes (or `r` and `s` in signature) */
         swapPoint: (point: TArg<Uint8Array>) => TRet<Uint8Array>;
+        /** Curve parameters passed to `gost3410` constructor */
         parameters: GostCurveParameters;
     }
 }

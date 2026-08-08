@@ -21,7 +21,7 @@ npm i @li0ard/gost
 ## Supported algorithms
 
 - Curves and ECDSA (GOST R 34.10-2001 and GOST R 34.10-2012)
-    - Determenistic signatures via [HMAC-DRBG (RFC 6979)](https://datatracker.ietf.org/doc/html/rfc6979) over Streebog-256 or Streebog-512
+    - Determenistic & [Hedged](https://datatracker.ietf.org/doc/html/rfc6979#section-3.6) signatures via [HMAC-DRBG (RFC 6979)](https://datatracker.ietf.org/doc/html/rfc6979) over Streebog-256 or Streebog-512
     - VKO key agreement function
     - Points conversion from Weierstrass to Twisted Edwards form and vice versa
     - Various curves included (TK-26, CryptoPro, tests etc.)

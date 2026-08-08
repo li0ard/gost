@@ -12,15 +12,15 @@ const performTest = (
     expectedSign: TArg<Uint8Array>
 ) => {
     const publicKey = signer.getPublicKey(privKey, false);
-    const signature = signer.sign(privKey, digest, rand);
+    const signature = signer.sign(privKey, digest, {rand});
     expect(publicKey).toStrictEqual(expectedPk as TRet<Uint8Array>);
     expect(signature).toStrictEqual(expectedSign as TRet<Uint8Array>);
     expect(signer.verify(publicKey, digest, expectedSign)).toBeTrue();
-    // Generate and verify deterministic signature
+    // Generate and verify hedged (deterministic + randomness) signature
     expect(signer.verify(
         publicKey,
         digest,
-        signer.sign(privKey, digest)
+        signer.sign(privKey, digest, { extraEntropy: true })
     )).toBeTrue();
 }
 
