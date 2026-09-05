@@ -34,10 +34,12 @@ const G = (v: number, sbox: TArg<Uint8Array>): number => {
 
 const extendKey = (key: TArg<Uint8Array>, sequence: number[], isLegacy: boolean): TRet<Uint32Array> => {
     const view = createView(key);
-    const chunks = new Uint32Array(BLOCKSIZE);
-    for (let i = 0; i < BLOCKSIZE; i++) chunks[i] = view.getUint32(i * 4, isLegacy);
-
-    return new Uint32Array(sequence.map(i => chunks[i]));
+    const result = new Uint32Array(sequence.length);
+    
+    for (let i = 0; i < sequence.length; i++)
+        result[i] = view.getUint32(sequence[i] * 4, isLegacy);
+    
+    return result;
 }
 
 /** Magma (GOST R 34.12-2015 and GOST 28147-89) cipher */
