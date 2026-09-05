@@ -35,25 +35,24 @@ export const createStreebogHmacDrbg = (Fn: TArg<IField<bigint>>) => {
         ];
         if(extraEntropy) seedArgs.push(randomBytes(Fn.BYTES));
         const seed = concatBytes(...seedArgs);
-
-        let V = new Uint8Array(Fn.BYTES).fill(0x01), K = new Uint8Array(Fn.BYTES);
-        K = hmac(K, concatBytes(V, zero, seed));
-        V = hmac(K, V);
-        K = hmac(K, concatBytes(V, one, seed));
-        V = hmac(K, V);
+    
+        const V = new Uint8Array(Fn.BYTES).fill(0x01),
+            K = hmac(new Uint8Array(Fn.BYTES), concatBytes(V, zero, seed));
+        V.set(hmac(K, V));
+        K.set(hmac(K, concatBytes(V, one, seed)));
+        V.set(hmac(K, V));
 
         while (true) {
-            let T = new Uint8Array(0);
+            let T = new Uint8Array();
             while (T.length < Fn.BYTES) {
-                V = hmac(K, V);
+                V.set(hmac(K, V));
                 T = concatBytes(T, V);
             }
 
             const k = bits2int(T);
-            if (k > 0n && k < Fn.ORDER) return k;
-
-            K = hmac(K, concatBytes(V, zero));
-            V = hmac(K, V);
+            if (Fn.isValidNot0(k)) return k;
+            K.set(hmac(K, concatBytes(V, zero)));
+            V.set(hmac(K, V));
         }
     }
 }
