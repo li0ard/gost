@@ -2,7 +2,7 @@ import { concatBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { streebog256hmac } from "./hmac.js";
 import { numberToBytesBE } from "@noble/curves/utils.js";
 import { pbkdf2 } from "@noble/hashes/pbkdf2.js";
-import { Streebog256, streebog256, streebog512 } from "./streebog/index.js";
+import { streebog256, streebog512 } from "./streebog/index.js";
 import { gost341194 } from "./gost341194/index.js";
 import { pad1, xorBytes } from "./utils.js";
 
@@ -74,7 +74,7 @@ export const cpkdf = (
     password: TArg<Uint8Array>,
     salt: TArg<Uint8Array>
 ): TRet<Uint8Array> => {
-    const hasher = Streebog256.create();
+    const hasher = streebog256.create();
     const bs = 64;
     if(password.length * 4 > 1024)
         throw new Error("Password cannot be longer than 256 symbols");
@@ -86,28 +86,20 @@ export const cpkdf = (
     if(password.length != 0) hasher.update(pin);
     const hash = hasher.digest();
 
-    const c = new Uint8Array(64);
+    const c = new Uint8Array(bs);
     c.set(new TextEncoder().encode("DENEFH028.760246785.IUEFHWUIO.EF"));
     const m0 = new Uint8Array(bs), m1 = new Uint8Array(bs);
     for(let j = 0; j < (password.length != 0 ? 2000 : 2); j++) {
         m0.set(xorBytes(c, _36));
         m1.set(xorBytes(c, _5C));
-
-        hasher.update(m0);
-        hasher.update(hash);
-        hasher.update(m1);
-        hasher.update(hash);
-
+        hasher.update(m0).update(hash).update(m1).update(hash);
         c.set(pad1(hasher.digest(), bs));
     }
 
     m0.set(xorBytes(c, _36));
     m1.set(xorBytes(c, _5C));
-    hasher.update(m0.subarray(0, 32));
-    hasher.update(salt);
-    hasher.update(m1.subarray(0, 32));
+    hasher.update(m0.subarray(0, 32)).update(salt).update(m1.subarray(0, 32));
     if(password.length != 0) hasher.update(pin);
-
     hasher.update(hasher.digest());
 
     return hasher.digest();

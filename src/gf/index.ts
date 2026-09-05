@@ -39,10 +39,8 @@ const gf_multtable_log = new Uint8Array([
 ]);
 
 const gf2m_multiply = (
-    degree: bigint,
-    poly: bigint,
-    a: TArg<Uint8Array>,
-    b: TArg<Uint8Array>
+    degree: bigint, poly: bigint,
+    a: TArg<Uint8Array>, b: TArg<Uint8Array>
 ): TRet<Uint8Array> => {
     let x = bytesToNumberBE(a), y = bytesToNumberBE(b), z = 0n;
     const max_bit = 1n << (degree - 1n);
@@ -58,14 +56,12 @@ const gf2m_multiply = (
 }
 
 export const gf64Multiply = (a: TArg<Uint8Array>, b: TArg<Uint8Array>): TRet<Uint8Array> => gf2m_multiply(
-    64n,
-    0x1Bn,
+    64n, 0x1Bn,
     a,b
 );
 
 export const gf128Multiply = (a: TArg<Uint8Array>, b: TArg<Uint8Array>): TRet<Uint8Array> => gf2m_multiply(
-    128n,
-    0x87n,
+    128n, 0x87n,
     a,b
 );
 
