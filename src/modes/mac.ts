@@ -12,8 +12,8 @@ const shift1 = (src: TArg<Uint8Array>, dst: TArg<Uint8Array>): number => {
     let b = 0;
     for(let i = src.length - 1; i >= 0; i--) {
         const bb = src[i] >> 7;
-		dst[i] = src[i] << 1 | b;
-		b = bb;
+        dst[i] = src[i] << 1 | b;
+        b = bb;
     }
 
     return b;
@@ -29,7 +29,7 @@ export const mac = (cipher: Cipher): MACMode => {
     const Rb = cipher.blockSize === 16 ? Rb128 : Rb64;
     const L = encrypter(new Uint8Array(cipher.blockSize));
 
-    return {
+    return Object.freeze({
         compute: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
             const k1 = new Uint8Array(cipher.blockSize);
             const msb = shift1(L, k1);
@@ -63,7 +63,7 @@ export const mac = (cipher: Cipher): MACMode => {
 
             return encrypter(xorBytes(buf, lastBlock));
         }
-    }
+    });
 }
 
 /**
@@ -106,14 +106,14 @@ export const mac_legacy = (
 export const omac_acpkm = (cipher: Cipher): MACMode => {
     const sectionSize = cipher.blockSize * 2;
 
-    return {
+    return Object.freeze({
         compute: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
             let encrypter = cipher.encrypt.bind(cipher);
             let tail_offset = 0;
             if(msg.length % cipher.blockSize == 0) tail_offset = msg.length - cipher.blockSize;
             else tail_offset = msg.length - (msg.length % cipher.blockSize);
 
-            let prev: Uint8Array = new Uint8Array(cipher.blockSize).fill(0);
+            let prev: Uint8Array = new Uint8Array(cipher.blockSize);
             let sections = msg.length;
             if (msg.length % sectionSize != 0) sections += 1;
 
@@ -122,12 +122,12 @@ export const omac_acpkm = (cipher: Cipher): MACMode => {
             let k1 = new Uint8Array(sectionSize);
             for(let i = 0; i < tail_offset; i += cipher.blockSize) {
                 if (i % sectionSize == 0) {
-                    let keymat = keymats.slice(0, 32 + cipher.blockSize);
-                        keymats = keymats.slice(32 + cipher.blockSize);
-                    let key = keymat.slice(0, 32);
+                    const keymat = keymats.slice(0, 32 + cipher.blockSize);
+                    keymats = keymats.slice(32 + cipher.blockSize);
+                    const key = keymat.slice(0, 32);
                     k1 = keymat.slice(32);
                     // @ts-ignore
-                    let cipher2 = new cipher.constructor(key);
+                    const cipher2 = new cipher.constructor(key);
                     encrypter = cipher2.encrypt.bind(cipher2);
                 }
                 prev = encrypter(xorBytes(msg.subarray(i, i + cipher.blockSize), prev));
@@ -135,10 +135,10 @@ export const omac_acpkm = (cipher: Cipher): MACMode => {
 
             const tail = msg.slice(tail_offset);
             if(tail.length == cipher.blockSize) {
-                let key = keymats.slice(0, 32);
+                const key = keymats.slice(0, 32);
                 k1 = keymats.slice(32);
                 // @ts-ignore
-                let cipher2 = new cipher.constructor(key);
+                const cipher2 = new cipher.constructor(key);
                 encrypter = cipher2.encrypt.bind(cipher2);
             }
             let k2 = numberToVarBytesBE(bytesToNumberBE(k1) << 1n);
@@ -149,5 +149,5 @@ export const omac_acpkm = (cipher: Cipher): MACMode => {
                 (tail.length == cipher.blockSize) ? k1 : k2
             ));
         }
-    }
+    });
 }

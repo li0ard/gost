@@ -9,9 +9,8 @@ import { xorBytes, getPadLength } from "../utils.js";
 export const ofb = (cipher: Cipher, iv: TArg<Uint8Array>): StreamMode => {
     if (iv.length == 0 || iv.length % cipher.blockSize !== 0)
         throw new Error("Invalid IV size");
-    const encrypter = cipher.encrypt.bind(cipher);
 
-    return {
+    return Object.freeze({
         crypt: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
             let r: Uint8Array[] = [];
             for (let i = 0; i < iv.length; i += cipher.blockSize)
@@ -19,11 +18,11 @@ export const ofb = (cipher: Cipher, iv: TArg<Uint8Array>): StreamMode => {
 
             const result: Uint8Array[] = [];
             for(let i = 0; i < (msg.length + getPadLength(msg.length, cipher.blockSize)); i += cipher.blockSize) {
-                r = r.slice(1).concat(encrypter(r[0]));
+                r = r.slice(1).concat(cipher.encrypt(r[0]));
                 result.push(xorBytes(r[r.length - 1], msg.subarray(i, i + cipher.blockSize)));
             }
 
             return concatBytes(...result);
         }
-    }
+    });
 }

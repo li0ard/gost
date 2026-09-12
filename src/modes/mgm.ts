@@ -1,4 +1,4 @@
-import { concatBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { concatBytes, copyBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import type { AEADMode, Cipher } from "../types.js";
 import { bytesToNumberBE, equalBytes, numberToBytesBE } from "@noble/curves/utils.js";
 import { pad1, xorBytes } from "../utils.js";
@@ -24,7 +24,6 @@ export const mgm = (cipher: Cipher, nonce: TArg<Uint8Array>, tagSize = cipher.bl
     if(tagSize < 4 || tagSize > cipher.blockSize)
         throw new Error("Invalid tagSize");
 
-    const encrypter = cipher.encrypt.bind(cipher);
     const maxSize = (1n << BigInt(cipher.blockSize * 4)) - 1n;
 
     const validateSizes = (plaintext: TArg<Uint8Array>, additional: TArg<Uint8Array>) => {
@@ -34,14 +33,14 @@ export const mgm = (cipher: Cipher, nonce: TArg<Uint8Array>, tagSize = cipher.bl
             throw new Error("plaintext+additional_data are too big");
     }
 
-    const mul = (cipher.blockSize == 8 ? gf64Multiply : gf128Multiply);
+    const mul = cipher.blockSize == 8 ? gf64Multiply : gf128Multiply;
 
     const crypt = (icn: TArg<Uint8Array>, data: TArg<Uint8Array>) => {
         icn[0] &= 0x7F;
-        let enc = encrypter(icn);
+        let enc = cipher.encrypt(icn);
         const res: Uint8Array[] = [];
         while (data.length > 0) {
-            res.push(xorBytes(encrypter(enc), data));
+            res.push(xorBytes(cipher.encrypt(enc), data));
             enc = incr_r(enc);
             data = data.slice(cipher.blockSize);
         }
@@ -50,13 +49,13 @@ export const mgm = (cipher: Cipher, nonce: TArg<Uint8Array>, tagSize = cipher.bl
 
     const auth = (icn: TArg<Uint8Array>, text: TArg<Uint8Array>, ad: TArg<Uint8Array>) => {
         icn[0] |= 0x80;
-        let enc = encrypter(icn);
+        let enc = cipher.encrypt(icn);
         let _sum = new Uint8Array(cipher.blockSize);
         const ad_len = ad.length;
         const text_len = text.length;
         while (ad.length > 0) {
             _sum = xorBytes(_sum, mul(
-                encrypter(enc),
+                cipher.encrypt(enc),
                 pad1(ad.subarray(0, cipher.blockSize), cipher.blockSize)
             ));
             enc = incr_l(enc);
@@ -65,26 +64,26 @@ export const mgm = (cipher: Cipher, nonce: TArg<Uint8Array>, tagSize = cipher.bl
 
         while (text.length > 0) {
             _sum = xorBytes(_sum, mul(
-                encrypter(enc),
+                cipher.encrypt(enc),
                 pad1(text.subarray(0, cipher.blockSize), cipher.blockSize)
             ));
             enc = incr_l(enc);
             text = text.slice(cipher.blockSize);
         }
 
-        _sum = xorBytes(_sum, mul(encrypter(enc), concatBytes(
+        _sum = xorBytes(_sum, mul(cipher.encrypt(enc), concatBytes(
             numberToBytesBE(ad_len * 8, halfbs),
             numberToBytesBE(text_len * 8, halfbs),
         )));
 
-        return encrypter(_sum).subarray(0, tagSize);
+        return cipher.encrypt(_sum).subarray(0, tagSize);
     }
 
-    return {
+    return Object.freeze({
         seal: (plaintext: TArg<Uint8Array>, aad: TArg<Uint8Array> = new Uint8Array()): TRet<Uint8Array> => {
             validateSizes(plaintext, aad);
 
-            const icn = nonce.slice();
+            const icn = copyBytes(nonce);
             const ciphertext = crypt(icn, plaintext);
             const tag = auth(icn, ciphertext, aad);
             return concatBytes(ciphertext, tag);
@@ -93,7 +92,7 @@ export const mgm = (cipher: Cipher, nonce: TArg<Uint8Array>, tagSize = cipher.bl
         open: (ciphertext: TArg<Uint8Array>, aad: TArg<Uint8Array> = new Uint8Array()): TRet<Uint8Array> => {
             validateSizes(ciphertext, aad);
 
-            const icn = nonce.slice();
+            const icn = copyBytes(nonce);
             const ct = ciphertext.slice(0, (ciphertext.length - tagSize));
             const tag_expected = ciphertext.subarray((ciphertext.length - tagSize));
             const tag = auth(icn, ct, aad);
@@ -102,5 +101,5 @@ export const mgm = (cipher: Cipher, nonce: TArg<Uint8Array>, tagSize = cipher.bl
 
             return crypt(icn, ct);
         }
-    }
+    });
 }

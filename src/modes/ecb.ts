@@ -21,8 +21,8 @@ export const ecb = (cipher: Cipher): BlockMode => {
         return output;
     }
 
-    return {
+    return Object.freeze({
         encrypt: (plaintext: TArg<Uint8Array>): TRet<Uint8Array> => core(encrypter, plaintext),
         decrypt: (ciphertext: TArg<Uint8Array>): TRet<Uint8Array> => core(decrypter, ciphertext),
-    }
+    });
 }

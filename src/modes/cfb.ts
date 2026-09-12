@@ -10,9 +10,8 @@ import { getPadLength, xorBytes } from "../utils.js";
 export const cfb = (cipher: Cipher, iv: TArg<Uint8Array>): BlockMode => {
     if (iv.length == 0 || iv.length % cipher.blockSize !== 0)
         throw new Error("Invalid IV size");
-    const encrypter = cipher.encrypt.bind(cipher);
 
-    return {
+    return Object.freeze({
         encrypt: (plaintext: TArg<Uint8Array>): TRet<Uint8Array> => {
             let r: Uint8Array[] = [];
             for (let i = 0; i < iv.length; i += cipher.blockSize)
@@ -20,7 +19,7 @@ export const cfb = (cipher: Cipher, iv: TArg<Uint8Array>): BlockMode => {
 
             const result: Uint8Array[] = [];
             for(let i = 0; i < (plaintext.length + getPadLength(plaintext.length, cipher.blockSize)); i += cipher.blockSize) {
-                result.push(xorBytes(encrypter(r[0]), plaintext.subarray(i, i + cipher.blockSize)));
+                result.push(xorBytes(cipher.encrypt(r[0]), plaintext.subarray(i, i + cipher.blockSize)));
                 r = r.slice(1).concat(result[result.length - 1]);
             }
 
@@ -34,11 +33,11 @@ export const cfb = (cipher: Cipher, iv: TArg<Uint8Array>): BlockMode => {
             const result: Uint8Array[] = [];
             for(let i = 0; i < (ciphertext.length + getPadLength(ciphertext.length, cipher.blockSize)); i += cipher.blockSize) {
                 const blk = ciphertext.slice(i, i + cipher.blockSize);
-                result.push(xorBytes(encrypter(r[0]), blk));
+                result.push(xorBytes(cipher.encrypt(r[0]), blk));
                 r = r.slice(1).concat(blk);
             }
 
             return concatBytes(...result);
         }
-    }
+    });
 }
