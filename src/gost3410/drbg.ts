@@ -1,6 +1,5 @@
 import type { IField } from "@noble/curves/abstract/modular.js";
-import { bytesToNumberBE, numberToBytesBE, randomBytes, type TArg } from "@noble/curves/utils.js";
-import { concatBytes } from "@noble/hashes/utils.js";
+import { concatBytes, bytesToNumberBE, numberToBytesBE, randomBytes, type TArg } from "@noble/curves/utils.js";
 import { streebog256hmac, streebog512hmac } from "../hmac.js";
 
 const zero = new Uint8Array([0x00]), one = new Uint8Array([0x01]);

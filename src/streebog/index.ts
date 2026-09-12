@@ -103,9 +103,9 @@ const G = (
 
 /** Streebog (GOST R 34.11-2012) hash function */
 abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
-    public readonly blockLen = BLOCKSIZE;
-    public readonly outputLen: number;
-    public readonly canXOF = false;
+    readonly blockLen = BLOCKSIZE;
+    readonly outputLen: number;
+    readonly canXOF = false;
     protected buffer: Uint8Array;
 
     abstract _cloneInto(to?: T): T;

@@ -2,7 +2,7 @@
  * Implementation of GOST R 34.12-2015 ([RFC 7801](https://datatracker.ietf.org/doc/html/rfc7801.html)) "Kuznyechik" block cipher
  * @module
  */
-import { copyBytes, type TArg, type TRet } from "@noble/curves/utils.js";
+import { copyBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { ITER, L, PI, PI_REV } from "./const.js";
 import { xorBytes } from "../utils.js";
 import type { Cipher } from "../types.js";
@@ -68,8 +68,8 @@ const F = (
 
 /** Kuznyechik (GOST R 34.12-2015) cipher */
 export class Kuznyechik implements Cipher {
-    public readonly keySize = 32;
-    public readonly blockSize = 16;
+    readonly keySize = 32;
+    readonly blockSize = 16;
 
     private roundKeys: Uint8Array[];
     /**

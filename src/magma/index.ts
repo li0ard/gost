@@ -44,8 +44,8 @@ const extendKey = (key: TArg<Uint8Array>, sequence: number[], isLegacy: boolean)
 
 /** Magma (GOST R 34.12-2015 and GOST 28147-89) cipher */
 export class Magma implements Cipher {
-    public readonly keySize = 32;
-    public readonly blockSize = BLOCKSIZE;
+    readonly keySize = 32;
+    readonly blockSize = BLOCKSIZE;
 
     /**
      * Magma (GOST R 34.12-2015 and GOST 28147-89) cipher
@@ -61,7 +61,7 @@ export class Magma implements Cipher {
         if (key.length !== this.keySize) throw new Error("Invalid key length");
     }
 
-    public proceedBlock(block: TArg<Uint8Array>, sequence: number[]): TRet<Uint8Array> {
+    proceedBlock(block: TArg<Uint8Array>, sequence: number[]): TRet<Uint8Array> {
         if (block.length !== this.blockSize) throw new Error("Invalid block size");
         const roundKeys = extendKey(this.key, sequence, this.isLegacy);
 
@@ -80,11 +80,11 @@ export class Magma implements Cipher {
         else return concatBytes(numberToBytesBE(a1, 4), numberToBytesBE(a0, 4));
     }
 
-    public encrypt(plaintext: TArg<Uint8Array>): TRet<Uint8Array> {
+    encrypt(plaintext: TArg<Uint8Array>): TRet<Uint8Array> {
         return this.proceedBlock(plaintext, magmaKeySequences.ENCRYPT);
     }
 
-    public decrypt(ciphertext: TArg<Uint8Array>): TRet<Uint8Array> {
+    decrypt(ciphertext: TArg<Uint8Array>): TRet<Uint8Array> {
         return this.proceedBlock(ciphertext, magmaKeySequences.DECRYPT);
     }
 }

@@ -1,6 +1,5 @@
-import { concatBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { streebog256hmac } from "./hmac.js";
-import { numberToBytesBE } from "@noble/curves/utils.js";
+import { numberToBytesBE, concatBytes, type TArg, type TRet } from "@noble/curves/utils.js";
 import { pbkdf2 } from "@noble/hashes/pbkdf2.js";
 import { streebog256, streebog512 } from "./streebog/index.js";
 import { gost341194 } from "./gost341194/index.js";
