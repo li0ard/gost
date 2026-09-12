@@ -12,7 +12,7 @@ const shift1 = (src: TArg<Uint8Array>, dst: TArg<Uint8Array>): number => {
     let b = 0;
     for(let i = src.length - 1; i >= 0; i--) {
         const bb = src[i] >> 7;
-		dst[i] = src[i]<<1 | b;
+		dst[i] = src[i] << 1 | b;
 		b = bb;
     }
 
@@ -71,30 +71,32 @@ export const mac = (cipher: Cipher): MACMode => {
  * 
  * **RU:** Режим выработки имитовставки (ГОСТ 28147-89)
  */
-export const mac_legacy = (cipher: Magma, iv: TArg<Uint8Array> = new Uint8Array(cipher.blockSize)): MACMode => {
-    const split = (data: TArg<Uint8Array>): number[] => [
-        Number(bytesToNumberLE(data.subarray(0, 4))),
-        Number(bytesToNumberLE(data.subarray(4, 8))) 
-    ];
-    const join = (ns: number[]): TRet<Uint8Array> => concatBytes(
-        numberToBytesLE(ns[1], 4),
-        numberToBytesLE(ns[0], 4)
-    );
+export const mac_legacy = (
+    cipher: Magma,
+    iv: TArg<Uint8Array> = new Uint8Array(cipher.blockSize)
+): MACMode => Object.freeze({
+    compute: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
+        const paddedData = pad1(msg, cipher.blockSize);
 
-    return {
-        compute: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
-            const paddedData = pad1(msg, cipher.blockSize);
+        let prev0 = bytesToNumberLE(iv.subarray(4, 8)),
+            prev1 = bytesToNumberLE(iv.subarray(0, 4));
+        const feedback = new Uint8Array(cipher.blockSize);
+        for (let i = 0; i < paddedData.length; i += cipher.blockSize) {
+            feedback.set(numberToBytesLE(prev1, 4), 0);
+            feedback.set(numberToBytesLE(prev0, 4), 4);
 
-            let prev = split(iv).reverse();
-            for(let i = 0; i < paddedData.length; i += cipher.blockSize) prev = split(cipher.proceedBlock(
-                xorBytes(paddedData.subarray(i, i + cipher.blockSize), join(prev)),
+            const out = cipher.proceedBlock(
+                xorBytes(paddedData.subarray(i, i + cipher.blockSize), feedback),
                 magmaKeySequences.MAC
-            ));
+            );
 
-            return join(prev);
+            prev0 = bytesToNumberLE(out.subarray(0, 4));
+            prev1 = bytesToNumberLE(out.subarray(4, 8));
         }
+
+        return concatBytes(numberToBytesLE(prev1, 4), numberToBytesLE(prev0, 4));
     }
-}
+});
 
 /**
  * **EN:** Message Authentication Code with Advance Cryptographic Prolongation of Key Material (OMAC-ACPKM) mode
