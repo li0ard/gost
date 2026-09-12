@@ -1,8 +1,7 @@
-import { concatBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { concatBytes, type TArg, type TRet, equalBytes } from "@noble/curves/utils.js";
 import type { Cipher, WrapMode, WrapModeMagma } from "../types.js";
 import { mac as _mac, mac_legacy } from "./mac.js";
 import { ctr } from "./ctr.js";
-import { equalBytes } from "@noble/curves/utils.js";
 import { ID_GOST_28147_89_CRYPTO_PRO_A_PARAM_SET } from "../magma/const.js";
 import { Magma } from "../magma/index.js";
 import { ecb } from "./ecb.js";

@@ -1,7 +1,6 @@
-import { concatBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { bytesToNumberLE, numberToBytesBE, numberToBytesLE, concatBytes, type TArg, type TRet } from "@noble/curves/utils.js";
 import type { Cipher, StreamMode } from "../types.js";
 import { xorBytes } from "../utils.js";
-import { bytesToNumberLE, numberToBytesBE, numberToBytesLE } from "@noble/curves/utils.js";
 import type { Magma } from "../magma/index.js";
 import { acpkm } from "./_keytransform.js";
 

@@ -1,7 +1,6 @@
-import { concatBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { bytesToNumberBE, bytesToNumberLE, numberToBytesLE, numberToVarBytesBE, concatBytes, type TArg, type TRet } from "@noble/curves/utils.js";
 import type { Cipher, MACMode } from "../types.js";
 import { pad1, pad3, xorBytes } from "../utils.js";
-import { bytesToNumberBE, bytesToNumberLE, numberToBytesLE, numberToVarBytesBE } from "@noble/curves/utils.js";
 import { magmaKeySequences, Magma } from "../magma/index.js";
 import { acpkm_master } from "./_keytransform.js";
 

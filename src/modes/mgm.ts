@@ -1,6 +1,5 @@
-import { concatBytes, copyBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { concatBytes, copyBytes, type TArg, type TRet, bytesToNumberBE, equalBytes, numberToBytesBE } from "@noble/curves/utils.js";
 import type { AEADMode, Cipher } from "../types.js";
-import { bytesToNumberBE, equalBytes, numberToBytesBE } from "@noble/curves/utils.js";
 import { pad1, xorBytes } from "../utils.js";
 import { gf64Multiply, gf128Multiply } from "../gf/index.js"; 
 /**
