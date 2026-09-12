@@ -3,11 +3,13 @@ import { describe, test, expect } from "bun:test";
 import { kexp15, kwp } from "./wrap";
 import { Kuznyechik } from "../kuznyechik";
 import { Magma } from "../magma";
+import { KEY_KUZNYECHIK } from "./_test_utils.test";
+
+const keyEnc = hexToBytes("202122232425262728292A2B2C2D2E2F38393A3B3C3D3E3F3031323334353637");
+const keyMac = hexToBytes("08090A0B0C0D0E0F0001020304050607101112131415161718191A1B1C1D1E1F");
 
 describe("[KEXP] Kuznyechik", () => {
-    const key = hexToBytes("8899AABBCCDDEEFF0011223344556677FEDCBA98765432100123456789ABCDEF");
-    const keyEnc = hexToBytes("202122232425262728292A2B2C2D2E2F38393A3B3C3D3E3F3031323334353637");
-    const keyMac = hexToBytes("08090A0B0C0D0E0F0001020304050607101112131415161718191A1B1C1D1E1F");
+    const key = KEY_KUZNYECHIK;
     const iv = hexToBytes("0909472DD9F26BE8");
     const kexp = hexToBytes("E36184E84E8D736FF36CC2E5AE065DC656B23C20F549B02FDFF88E1F3F30D8C29A53F3CA554DBAD80DE152B9A4625B32");
     const mode = kexp15(new Kuznyechik(keyEnc), new Kuznyechik(keyMac), iv);
@@ -19,9 +21,7 @@ describe("[KEXP] Kuznyechik", () => {
 });
 
 describe("[KEXP] Magma", () => {
-    const key = hexToBytes("8899AABBCCDDEEFF0011223344556677FEDCBA98765432100123456789ABCDEF");
-    const keyEnc = hexToBytes("202122232425262728292A2B2C2D2E2F38393A3B3C3D3E3F3031323334353637");
-    const keyMac = hexToBytes("08090A0B0C0D0E0F0001020304050607101112131415161718191A1B1C1D1E1F");
+    const key = KEY_KUZNYECHIK;
     const iv = hexToBytes("67BED654");
     const kexp = hexToBytes("CFD5A12D5B81B6E1E99C916D07900C6AC12703FB3ABDED55567BF3742C899C755DAFE7B42E3A8BD9");
     const mode = kexp15(new Magma(keyEnc), new Magma(keyMac), iv);
