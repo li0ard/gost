@@ -4,7 +4,7 @@
  */
 import { concatBytes, copyBytes, createHasher, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { Magma } from "../magma/index.js";
-import { DSSZZI_UA_DKE_1, ID_GOSTR_3411_94_CRYPTOPRO_PARAM_SET } from "../magma/const.js";
+import { ID_GOSTR_3411_94_CRYPTOPRO_PARAM_SET } from "../magma/const.js";
 import { bytesToNumberBE, numberToBytesBE } from "@noble/curves/utils.js";
 import { xorBytes } from "../utils.js";
 
@@ -76,9 +76,9 @@ const _step = (
 
 /** GOST R 34.11-94 hash function */
 export class Gost341194 implements Hash<Gost341194> {
-    public readonly blockLen = 32;
-    public readonly outputLen = 32;
-    public readonly canXOF = false;
+    readonly blockLen = 32;
+    readonly outputLen = 32;
+    readonly canXOF = false;
     private buffer: TArg<Uint8Array>;
 
     /** GOST R 34.11-94 hash function */
@@ -87,7 +87,7 @@ export class Gost341194 implements Hash<Gost341194> {
     ) { this.buffer = new Uint8Array(); }
 
     /** Create hash instance */
-    public static create(): Gost341194 { return new Gost341194(); }
+    static create(): Gost341194 { return new Gost341194(); }
 
     destroy() { this.buffer = new Uint8Array(); }
 
@@ -138,5 +138,3 @@ export class Gost341194 implements Hash<Gost341194> {
 
 /** GOST R 34.11-94 hash function */
 export const gost341194 = createHasher(Gost341194.create);
-/** DSTU GOST 34.311-95 */
-export const gost3431195 = createHasher(() => new Gost341194(DSSZZI_UA_DKE_1));
