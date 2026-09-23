@@ -29,7 +29,7 @@ describe("[KDF] Streebog", () => {
         expect(streebog512pbkdf2(password, salt, 2, 64)).toStrictEqual(expected);
     });
 
-    test("CPKDF", () => {
+    test.skipIf(process.env.SKIP_LONG == "1")("CPKDF", () => {
         const pass = new TextEncoder().encode("qawsqaws");
         const salt = hexToBytes("98e4f49415555d8ab20567a0");
         const expected  = hexToBytes("b551b39608787399ba85c59c68906b8f83c289ccee3c6141700dfc75ec0fd9f5");
