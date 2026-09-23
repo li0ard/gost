@@ -2,7 +2,7 @@ import { type TArg, type TRet, bytesToNumberLE, concatBytes, copyBytes, numberTo
 import { Magma } from "../magma/index.js";
 import { ID_GOST_28147_89_CRYPTO_PRO_A_PARAM_SET } from "../magma/const.js";
 import { cfb } from "./cfb.js";
-import type { Cipher, CipherOrHashFunctionWrapper } from "../types.js";
+import type { Cipher, CipherCtor, CipherOrHashFunctionWrapper } from "../types.js";
 import { ctr } from "./ctr.js";
 
 export const cp_kek_diversify = (
@@ -48,3 +48,27 @@ export const acpkm_master = (cipher: Cipher, length: number): TRet<Uint8Array> =
     new Uint8Array(cipher.blockSize / 2).fill(0xFF),
     true, true
 ).crypt(new Uint8Array(length));
+
+const MESH_CONST = new Uint8Array([
+    0x69, 0x00, 0x72, 0x22, 0x64, 0xC9, 0x04, 0x23,
+    0x8D, 0x3A, 0xDB, 0x96, 0x46, 0xE9, 0x2A, 0xC4,
+    0x18, 0xFE, 0xAC, 0x94, 0x00, 0xED, 0x07, 0x12,
+    0xC0, 0x86, 0xDC, 0xC2, 0xEF, 0x4C, 0xA9, 0x2B
+]);
+
+export const MESH_MAX_DATA = 1024;
+export const meshing = (cipher: Cipher, iv: TArg<Uint8Array>) => {
+    const bs = cipher.blockSize;
+    if (iv.length !== bs) throw new Error("Invalid IV size for meshing");
+    if (MESH_CONST.length % bs !== 0) throw new Error("Unsupported block size for meshing");
+
+    const keyBlocks: Uint8Array[] = [];
+    for (let i = 0; i < MESH_CONST.length; i += bs)
+        keyBlocks.push(cipher.decrypt(MESH_CONST.subarray(i, i + bs)));
+    const newKey = concatBytes(...keyBlocks);
+
+    const CipherCtor = cipher.constructor as CipherCtor;
+    const newCipher = new CipherCtor(newKey);
+
+    return { cipher: newCipher, iv: newCipher.encrypt(iv) };
+}
