@@ -1,11 +1,10 @@
-import { bytesToNumberBE, bytesToNumberLE, numberToBytesLE, numberToVarBytesBE, concatBytes, type TArg, type TRet } from "@noble/curves/utils.js";
-import type { Cipher, MACMode } from "../types.js";
+import { bytesToNumberLE, numberToBytesLE, concatBytes, type TArg, type TRet } from "@noble/curves/utils.js";
+import type { Cipher, CipherCtor, MACMode } from "../types.js";
 import { pad1, pad3, xorBytes } from "../utils.js";
 import { magmaKeySequences, Magma } from "../magma/index.js";
 import { acpkm_master } from "./_keytransform.js";
 
-const Rb64 = 0b11011;
-const Rb128 = 0b10000111;
+const Rb64 = 0b11011, Rb128 = 0b10000111, ACPKM_MASTER_KEYSIZE = 32;
 
 const shift1 = (src: TArg<Uint8Array>, dst: TArg<Uint8Array>): number => {
     let b = 0;
@@ -18,49 +17,45 @@ const shift1 = (src: TArg<Uint8Array>, dst: TArg<Uint8Array>): number => {
     return b;
 }
 
+const gfDouble = (k: TArg<Uint8Array>, Rb: number): TRet<Uint8Array> => {
+    const out = new Uint8Array(k.length);
+    if (shift1(k, out)) out[out.length - 1] ^= Rb;
+    return out;
+}
+
 /**
  * **EN:** Message Authentication Code (MAC) mode
  * 
  * **RU:** Режим выработки имитовставки
  */
 export const mac = (cipher: Cipher): MACMode => {
-    const encrypter = cipher.encrypt.bind(cipher);
-    const Rb = cipher.blockSize === 16 ? Rb128 : Rb64;
-    const L = encrypter(new Uint8Array(cipher.blockSize));
+    const bs = cipher.blockSize,
+        Rb = bs === 16 ? Rb128 : Rb64,
+        L = cipher.encrypt(new Uint8Array(bs)),
+        K1 = gfDouble(L, Rb), K2 = gfDouble(K1, Rb);
 
     return Object.freeze({
         compute: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
-            const k1 = new Uint8Array(cipher.blockSize);
-            const msb = shift1(L, k1);
-            if (msb) k1[cipher.blockSize - 1] ^= Rb;
+            const n = Math.ceil(msg.length / bs) || 1;
+            const lastBlockIsFull = msg.length > 0 && msg.length % bs === 0;
+            const tailOffset = (n - 1) * bs;
 
-            const k2 = new Uint8Array(cipher.blockSize);
-            const msb2 = shift1(k1, k2);
-            if (msb2) k2[cipher.blockSize - 1] ^= Rb;
+            let prev = new Uint8Array(bs);
+            for (let i = 0; i < tailOffset; i += bs)
+                prev = cipher.encrypt(xorBytes(prev, msg.subarray(i, i + bs)));
 
-            const n = Math.ceil(msg.length / cipher.blockSize) || 1;
-            const lastBlockComplete = msg.length > 0 && msg.length % cipher.blockSize === 0;
-
-            let buf = new Uint8Array(cipher.blockSize);
-            for (let i = 0; i < n - 1; i++) {
-                const m = msg.subarray(i * cipher.blockSize, (i + 1) * cipher.blockSize);
-                buf = encrypter(xorBytes(buf, m));
-            }
-
-            let lastBlock: Uint8Array;
-            if (lastBlockComplete && msg.length > 0) lastBlock = xorBytes(
-                msg.subarray((n - 1) * cipher.blockSize, n * cipher.blockSize),
-                k1
-            );
+            let lastBlock;
+            if (lastBlockIsFull)
+                lastBlock = xorBytes(msg.subarray(tailOffset, tailOffset + bs), K1);
             else {
-                const padded = new Uint8Array(cipher.blockSize);
-                const remaining = msg.length - (n - 1) * cipher.blockSize;
-                padded.set(msg.subarray((n - 1) * cipher.blockSize));
-                padded[remaining] = 0x80;
-                lastBlock = xorBytes(padded, k2);
+                const tail = msg.subarray(tailOffset);
+                const padded = new Uint8Array(bs);
+                padded.set(tail);
+                padded[tail.length] = 0x80;
+                lastBlock = xorBytes(padded, K2);
             }
 
-            return encrypter(xorBytes(buf, lastBlock));
+            return cipher.encrypt(xorBytes(prev, lastBlock));
         }
     });
 }
@@ -103,49 +98,52 @@ export const mac_legacy = (
  * **RU:** Режим выработки имитовставки с преобразованием ключа (ACPKM)
  */
 export const omac_acpkm = (cipher: Cipher): MACMode => {
-    const sectionSize = cipher.blockSize * 2;
+    const bs = cipher.blockSize,
+        sectionSize = bs * 2,
+        Rb = bs === 16 ? Rb128 : Rb64,
+        keymatSize = ACPKM_MASTER_KEYSIZE + bs,
+        CipherCtor = cipher.constructor as CipherCtor;
 
     return Object.freeze({
         compute: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
+            const tailOffset = msg.length % bs === 0
+                ? msg.length - bs
+                : msg.length - (msg.length % bs);
+
+            let sections = Math.floor(msg.length / sectionSize);
+            if (msg.length % sectionSize !== 0) sections += 1;
+            if (sections === 0) sections = 1;
+
+            let keymats: Uint8Array = acpkm_master(cipher, keymatSize * sections);
             let encrypter = cipher.encrypt.bind(cipher);
-            let tail_offset = 0;
-            if(msg.length % cipher.blockSize == 0) tail_offset = msg.length - cipher.blockSize;
-            else tail_offset = msg.length - (msg.length % cipher.blockSize);
+            let k1: Uint8Array = new Uint8Array(bs);
+            let rotated = false;
 
-            let prev: Uint8Array = new Uint8Array(cipher.blockSize);
-            let sections = msg.length;
-            if (msg.length % sectionSize != 0) sections += 1;
+            const rotateKey = () => {
+                const key = keymats.subarray(0, ACPKM_MASTER_KEYSIZE);
+                k1 = keymats.subarray(ACPKM_MASTER_KEYSIZE, keymatSize);
+                keymats = keymats.subarray(keymatSize);
 
-            let keymats = acpkm_master(cipher, (32 + cipher.blockSize) * sections);
-
-            let k1 = new Uint8Array(sectionSize);
-            for(let i = 0; i < tail_offset; i += cipher.blockSize) {
-                if (i % sectionSize == 0) {
-                    const keymat = keymats.slice(0, 32 + cipher.blockSize);
-                    keymats = keymats.slice(32 + cipher.blockSize);
-                    const key = keymat.slice(0, 32);
-                    k1 = keymat.slice(32);
-                    // @ts-ignore
-                    const cipher2 = new cipher.constructor(key);
-                    encrypter = cipher2.encrypt.bind(cipher2);
-                }
-                prev = encrypter(xorBytes(msg.subarray(i, i + cipher.blockSize), prev));
-            }
-
-            const tail = msg.slice(tail_offset);
-            if(tail.length == cipher.blockSize) {
-                const key = keymats.slice(0, 32);
-                k1 = keymats.slice(32);
-                // @ts-ignore
-                const cipher2 = new cipher.constructor(key);
+                const cipher2 = new CipherCtor(key);
                 encrypter = cipher2.encrypt.bind(cipher2);
+                rotated = true;
             }
-            let k2 = numberToVarBytesBE(bytesToNumberBE(k1) << 1n);
-            if((k1[0] & 0x80) != 0)
-                k2 = xorBytes(k2, numberToVarBytesBE(cipher.blockSize == 16 ? Rb128 : Rb64));
+
+            let prev = new Uint8Array(bs);
+            for (let i = 0; i < tailOffset; i += bs) {
+                if (i % sectionSize === 0) rotateKey();
+                prev = encrypter(xorBytes(msg.subarray(i, i + bs), prev));
+            }
+
+            const tail = msg.subarray(tailOffset);
+            if (tail.length === bs) rotateKey();
+            if (!rotated) rotateKey();
+
+            const k2 = gfDouble(k1, Rb);
+
             return encrypter(xorBytes(
-                xorBytes(pad3(tail, cipher.blockSize), prev),
-                (tail.length == cipher.blockSize) ? k1 : k2
+                xorBytes(pad3(tail, bs), prev),
+                tail.length === bs ? k1 : k2
             ));
         }
     });

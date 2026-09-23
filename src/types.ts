@@ -16,6 +16,9 @@ export type Cipher = {
     decrypt(ciphertext: TArg<Uint8Array>): TRet<Uint8Array>;
 }
 
+/** Cipher constructor */
+export type CipherCtor = new (key: TArg<Uint8Array>) => Cipher;
+
 /** Block mode for {@link Cipher} */
 export type BlockMode = {
     /** Encrypt plaintext */
