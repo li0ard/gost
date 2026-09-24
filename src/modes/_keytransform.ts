@@ -23,7 +23,7 @@ export const cp_kek_diversify = (
         out = cfb(new Magma(out, sbox, true), iv).encrypt(out);
     }
 
-    return out as TRet<Uint8Array>;
+    return out;
 }
 
 const ACPKM_D = new Uint8Array([
@@ -35,10 +35,7 @@ const ACPKM_D = new Uint8Array([
 
 export const acpkm = (encrypter: CipherOrHashFunctionWrapper, bs: number): TRet<Uint8Array> => {
     const result: Uint8Array[] = [];
-    for (let i = 0; i < 32; i += bs) {
-        const block = ACPKM_D.subarray(i, i + bs);
-        result.push(encrypter(block));
-    }
+    for (let i = 0; i < 32; i += bs) result.push(encrypter(ACPKM_D.subarray(i, i + bs)));
 
     return concatBytes(...result);
 }

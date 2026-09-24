@@ -30,8 +30,7 @@ export const cfb = (cipher: Cipher, iv: TArg<Uint8Array>, mesh?: boolean): Block
                     encrypter = activeCipher.encrypt.bind(activeCipher);
                     r[r.length - 1] = meshed.iv;
                 }
-                const chunkLen = Math.min(bs, plaintext.length - i);
-                const ct = xorBytes(plaintext.subarray(i, i + chunkLen), encrypter(r[0]));
+                const ct = xorBytes(plaintext.subarray(i, i + bs), encrypter(r[0]));
                 out.set(ct, i);
                 r.shift();
                 r.push(ct);
@@ -55,8 +54,7 @@ export const cfb = (cipher: Cipher, iv: TArg<Uint8Array>, mesh?: boolean): Block
                     encrypter = activeCipher.encrypt.bind(activeCipher);
                     r[r.length - 1] = meshed.iv;
                 }
-                const chunkLen = Math.min(bs, ciphertext.length - i);
-                const blk = ciphertext.subarray(i, i + chunkLen);
+                const blk = ciphertext.subarray(i, i + bs);
                 out.set(xorBytes(blk, encrypter(r[0])), i);
                 r.shift();
                 r.push(blk);

@@ -8,6 +8,10 @@ export const xorBytes = (a: TArg<Uint8Array>, b: TArg<Uint8Array>): TRet<Uint8Ar
     return result;
 }
 
+export const xorBytesInPlace = (a: TArg<Uint8Array>, b: TArg<Uint8Array>) => {
+    for(let i = 0; i < a.length; i++) a[i] ^= b[i];
+}
+
 export const getPadLength = (dataLength: number, blockSize: number): number => {
     if(dataLength < blockSize) return blockSize - dataLength;
     if(dataLength % blockSize == 0) return 0;

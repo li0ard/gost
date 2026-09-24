@@ -22,9 +22,7 @@ export const ofb = (cipher: Cipher, iv: TArg<Uint8Array>): StreamMode => {
                 const gamma = cipher.encrypt(r[0]);
                 r.shift();
                 r.push(gamma);
-
-                const chunkLen = Math.min(bs, msg.length - i);
-                out.set(xorBytes(msg.subarray(i, i + chunkLen), gamma), i);
+                out.set(xorBytes(msg.subarray(i, i + bs), gamma), i);
             }
 
             return out;

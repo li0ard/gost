@@ -22,13 +22,12 @@ export const kexp15 = (cipherEnc: Cipher, cipherMac: Cipher, iv: TArg<Uint8Array
             return ctr(cipherEnc, iv).crypt(concatBytes(msg, mac));
         },
         unwrap: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
-            const key_and_key_mac = ctr(cipherEnc, iv).crypt(msg);
-            const key = key_and_key_mac.slice(0, -cipherEnc.blockSize),
-                key_mac = key_and_key_mac.subarray(-cipherEnc.blockSize);
-
+            const keymac = ctr(cipherEnc, iv).crypt(msg);
+            const key = keymac.slice(0, -cipherEnc.blockSize)
             const mac = _mac(cipherMac).compute(concatBytes(iv, key));
-            if(!equalBytes(key_mac, mac))
+            if(!equalBytes(keymac.subarray(-cipherEnc.blockSize), mac))
                 throw new Error("Invalid key MAC");
+
             return key;
         }
     });
