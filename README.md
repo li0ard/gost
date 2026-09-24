@@ -37,7 +37,9 @@ npm i @li0ard/gost
 ## Supported cipher modes
 
 - Cipher Block Chaining mode (CBC)
+    - Supports [CryptoPro key meshing](https://datatracker.ietf.org/doc/html/rfc4357#section-2.3.2)
 - Cipher Feedback mode (CFB)
+    - Supports [CryptoPro key meshing](https://datatracker.ietf.org/doc/html/rfc4357#section-2.3.2)
 - Counter mode (CTR)
     - Supports legacy version for GOST 28147-89 (CNT) and Counter with Advance Cryptographic Prolongation of Key Material (CTR-ACPKM)
 - Electronic Codebook mode (ECB)

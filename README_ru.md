@@ -37,7 +37,9 @@ npm i @li0ard/gost
 ## Поддерживаемые режимы шифров
 
 - Режим простой замены с зацеплением (CBC)
+    - Поддерживает [CryptoPro key meshing](https://datatracker.ietf.org/doc/html/rfc4357#section-2.3.2)
 - Режим гаммирования с обратной связью по шифртексту (CFB)
+    - Поддерживает [CryptoPro key meshing](https://datatracker.ietf.org/doc/html/rfc4357#section-2.3.2)
 - Режим гаммирования (CTR)
     - Поддерживает версию для ГОСТ 28147-89 (CNT), а также гаммирование с преобразованием ключа (CTR-ACPKM)
 - Режим простой замены (ECB)
