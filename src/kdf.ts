@@ -7,7 +7,7 @@ import { pad1, xorBytes } from "./utils.js";
 
 const _0 = new Uint8Array([0]);
 const _1 = new Uint8Array([1]);
-const _0100 = new Uint8Array([1,0]);
+const _256 = new Uint8Array([1,0]);
 const _36 = new Uint8Array(64).fill(0x36);
 const _5C = new Uint8Array(64).fill(0x5C);
 
@@ -18,7 +18,7 @@ export const kdf_gostr3411_2012_256 = (
     seed: TArg<Uint8Array>
 ): TRet<Uint8Array> => streebog256hmac(
     key,
-    concatBytes(_1, label, _0, seed, _0100)
+    concatBytes(_1, label, _0, seed, _256)
 );
 
 /** Key derivation function `KDF_TREE_GOSTR3411_2012_256 */

@@ -9,7 +9,7 @@ import { pad1, xorBytes } from "../utils.js";
 import { numberToBytesBE } from "@noble/curves/utils.js";
 
 const BLOCKSIZE = 64;
-const _0020 = new Uint8Array([0, 0, 2, 0]);
+const _512 = new Uint8Array([0, 0, 2, 0]);
 const _0 = new Uint8Array(64);
 
 const add512 = (a: TArg<Uint8Array>, b: TArg<Uint8Array>): TRet<Uint8Array> => {
@@ -143,7 +143,7 @@ abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
             const pos: number = message.length - blocks * this.blockLen;
 
             hash = G(n, hash, message.subarray(pos, pos + this.blockLen));
-            n = add512(n, _0020);
+            n = add512(n, _512);
             sigma = add512(sigma, message.subarray(pos, pos + this.blockLen));
             blocks++;
         }
