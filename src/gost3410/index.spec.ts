@@ -1,10 +1,10 @@
 import { hexToBytes, type TArg, type TRet } from "@noble/curves/utils.js";
 import { describe, test, expect } from "bun:test";
 import { gost2001CC, gost2001Test, gost256A, gost256B, gost256C, gost256D, gost512A, gost512B, gost512C, gost512Test } from "./index.js";
-import type { Signer } from "../types.js";
+import type { ECDSA } from "../types.js";
 
 const performTest = (
-    signer: Signer,
+    signer: ECDSA,
     privKey: TArg<Uint8Array>,
     digest: TArg<Uint8Array>,
     rand: TArg<Uint8Array>,

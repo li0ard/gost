@@ -11,10 +11,10 @@
     "./kuznyechik.js": "./kuznyechik/index.js",
     "./magma.js": "./magma/index.js",
     "./modes.js": "./modes/index.js",
-    "./oids.js": "./oids/index.js",
     "./streebog.js": "./streebog/index.js",
     "./hmac.js": "./hmac.js",
     "./kdf.js": "./kdf.js",
+    "./oids.js": "./oids.js",
     "./types.js": "./types.js"
   },
   "author": "li0ard",
