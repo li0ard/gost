@@ -79,7 +79,7 @@ export type SignOpts = {
 }
 
 /** GOST R 34.10 signer */
-export type Signer = {
+export type ECDSA = {
     /**
      * Computes public key for a secret key. Checks for validity of the secret key.
      * @param isCompressed - whether to return compact (default), or full key

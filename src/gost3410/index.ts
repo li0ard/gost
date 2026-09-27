@@ -28,7 +28,7 @@ import {
 import { getMinHashLength, mapHashToField } from "@noble/curves/abstract/modular.js";
 import { weierstrass } from "@noble/curves/abstract/weierstrass.js";
 import { createKeygen, type AffinePoint } from "@noble/curves/abstract/curve.js";
-import type { Signer, SignOpts } from "../types.js";
+import type { ECDSA, SignOpts } from "../types.js";
 import { createStreebogHmacDrbg } from "./drbg.js";
 
 /** Swap `x` and `y` in point bytes */
@@ -38,7 +38,7 @@ const swapPoint = (point: TArg<Uint8Array>): TRet<Uint8Array> => concatBytes(
 );
 
 /** Creates GOST R 34.10-2012 (2001) signing interface */
-export const gost3410 = (parameters: GostCurveParameters): Signer => {
+export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
     const Point = weierstrass(parameters);
     const { Fp, Fn, BASE } = Point;
     const lengths = Object.freeze({
@@ -141,7 +141,7 @@ export const gost3410 = (parameters: GostCurveParameters): Signer => {
     ): TRet<Uint8Array> => {
         const key = Point.fromBytes(publicKeyB)
         .multiply(Fn.fromBytes(secretKeyA))
-        .multiply(Fn.mulN(parameters.h, bytesToNumberBE(ukm)));
+        .multiply(Fn.mul(parameters.h, bytesToNumberBE(ukm)));
 
         return hash(concatBytes(
             numberToBytesLE(key.x, parameters.length),
@@ -191,14 +191,9 @@ export const gost3410 = (parameters: GostCurveParameters): Signer => {
     const utils = Object.freeze({ uv2xy, xy2uv, swapPoint, parameters });
 
     return Object.freeze({
-        getPublicKey,
-        sign,
-        verify,
-        getSharedSecret,
-        Point,
-        keygen,
-        lengths,
-        utils
+        Point, getPublicKey, getSharedSecret,
+        sign, verify,
+        keygen, lengths, utils
     });
 }
 
