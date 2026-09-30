@@ -83,37 +83,34 @@ export class Kuznyechik implements Cipher {
         roundKeys[0] = key.slice(0, this.blockSize);
         roundKeys[1] = key.slice(this.blockSize);
 
-        let temp1 = copyBytes(roundKeys[0]),
+        const temp1 = copyBytes(roundKeys[0]),
             temp2 = copyBytes(roundKeys[1]),
             temp3 = new Uint8Array(this.blockSize),
             temp4 = new Uint8Array(this.blockSize);
         for (let i = 0; i < 4; i++) {
             const baseIndex = i * 128;
-        
-            temp3 = F(temp1, temp2, ITER.subarray(baseIndex, baseIndex + 16));
-            temp4 = copyBytes(temp1);
-        
-            temp1 = F(temp3, temp4, ITER.subarray(baseIndex + 16, baseIndex + 32));
-            temp2 = copyBytes(temp3);
-        
-            temp3 = F(temp1, temp2, ITER.subarray(baseIndex + 32, baseIndex + 48));
-            temp4 = copyBytes(temp1);
-        
-            temp1 = F(temp3, temp4, ITER.subarray(baseIndex + 48, baseIndex + 64));
-            temp2 = copyBytes(temp3);
-        
-            temp3 = F(temp1, temp2, ITER.subarray(baseIndex + 64, baseIndex + 80));
-            temp4 = copyBytes(temp1);
-        
-            temp1 = F(temp3, temp4, ITER.subarray(baseIndex + 80, baseIndex + 96));
-            temp2 = copyBytes(temp3);
-        
-            temp3 = F(temp1, temp2, ITER.subarray(baseIndex + 96, baseIndex + 112));
-            temp4 = copyBytes(temp1);
-        
-            temp1 = F(temp3, temp4, ITER.subarray(baseIndex + 112, baseIndex + 128));
-            temp2 = copyBytes(temp3);
-        
+
+            temp3.set(F(temp1, temp2, ITER.subarray(baseIndex, baseIndex + 16)));
+            temp4.set(temp1);
+
+            temp1.set(F(temp3, temp4, ITER.subarray(baseIndex + 16, baseIndex + 32)));
+            temp2.set(temp3);
+            temp3.set(F(temp1, temp2, ITER.subarray(baseIndex + 32, baseIndex + 48)));
+            temp4.set(temp1);
+
+            temp1.set(F(temp3, temp4, ITER.subarray(baseIndex + 48, baseIndex + 64)));
+            temp2.set(temp3);
+            temp3.set(F(temp1, temp2, ITER.subarray(baseIndex + 64, baseIndex + 80)));
+            temp4.set(temp1);
+
+            temp1.set(F(temp3, temp4, ITER.subarray(baseIndex + 80, baseIndex + 96)));
+            temp2.set(temp3);
+            temp3.set(F(temp1, temp2, ITER.subarray(baseIndex + 96, baseIndex + 112)));
+            temp4.set(temp1);
+
+            temp1.set(F(temp3, temp4, ITER.subarray(baseIndex + 112, baseIndex + 128)));
+            temp2.set(temp3);
+
             roundKeys[2 + 2 * i] = copyBytes(temp1);
             roundKeys[3 + 2 * i] = copyBytes(temp2);
         }
