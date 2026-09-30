@@ -26,10 +26,10 @@ describe("[MAG LEGACY] Magma", () => {
     const key = hexToBytes("54686973206973206d657373616765ff206c656e677468003332206279746573");
     const cipher = new Magma(key, magmaSboxes.ID_GOST_28147_89_CRYPTO_PRO_A_PARAM_SET, true);
     
-    const pt = hexToBytes("616263");
+    const pt = new TextEncoder().encode("abc");
     test("#1", () => {
         const ct = hexToBytes("b6ff8873ca1a407f");
-        const mode = mac_legacy(cipher, hexToBytes("6161616161616161"));
+        const mode = mac_legacy(cipher, new TextEncoder().encode("aaaaaaaaaaaaaaaa"));
         
         expect(mode.compute(pt)).toStrictEqual(ct);
     });

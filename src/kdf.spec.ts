@@ -2,9 +2,6 @@ import { hexToBytes } from "@noble/hashes/utils.js";
 import { describe, test, expect } from "bun:test";
 import { cpkdf, gost341194pbkdf2, kdf_gostr3411_2012_256, kdf_tree_gostr3411_2012_256, streebog512pbkdf2 } from "./kdf";
 
-const password = new TextEncoder().encode("password");
-const salt = new TextEncoder().encode("salt");
-
 describe("[KDF] Streebog", () => {
     const key = hexToBytes("000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f");
     const label = hexToBytes("26bdb878");
@@ -26,11 +23,11 @@ describe("[KDF] Streebog", () => {
 
     test("PBKDF2", () => {
         const expected = hexToBytes("5a585bafdfbb6e8830d6d68aa3b43ac00d2e4aebce01c9b31c2caed56f0236d4d34b2b8fbd2c4e89d54d46f50e47d45bbac301571743119e8d3c42ba66d348de");
-        expect(streebog512pbkdf2(password, salt, 2, 64)).toStrictEqual(expected);
+        expect(streebog512pbkdf2("password", "salt", 2, 64)).toStrictEqual(expected);
     });
 
     test.skipIf(process.env.SKIP_LONG == "1")("CPKDF", () => {
-        const pass = new TextEncoder().encode("qawsqaws");
+        const pass = "qawsqaws";
         const salt = hexToBytes("98e4f49415555d8ab20567a0");
         const expected = hexToBytes("b551b39608787399ba85c59c68906b8f83c289ccee3c6141700dfc75ec0fd9f5");
 
@@ -41,6 +38,6 @@ describe("[KDF] Streebog", () => {
 describe("[KDF] GOST R 34.11-94", () => {
     test("PBKDF2", () => {
         const expected = hexToBytes("990dfa2bd965639ba48b07b792775df79f2db34fef25f274378872fed7ed1bb3");
-        expect(gost341194pbkdf2(password, salt, 2, 32)).toStrictEqual(expected);
+        expect(gost341194pbkdf2("password", "salt", 2, 32)).toStrictEqual(expected);
     });
 });
