@@ -2,62 +2,45 @@
  * Implementation of GOST R 34.11-2012 ([RFC 6986](https://datatracker.ietf.org/doc/html/rfc6986.html)) "Streebog" hash function
  * @module
  */
-import { concatBytes, copyBytes, createHasher, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { concatBytes, copyBytes, createHasher, createView, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { A, C } from "./const.js";
 import { PI } from "../kuznyechik/const.js";
-import { pad1, xorBytes } from "../utils.js";
+import { xorBytes } from "../utils.js";
 import { numberToBytesBE } from "@noble/curves/utils.js";
 
 const BLOCKSIZE = 64;
 const _512 = new Uint8Array([0, 0, 2, 0]);
 const _0 = new Uint8Array(64);
 
-const add512 = (a: TArg<Uint8Array>, b: TArg<Uint8Array>): TRet<Uint8Array> => {
-    const c = new Uint8Array(64);
-    const tmpA = new Uint8Array(64), tmpB = new Uint8Array(64);
-
-    for (let i = 0; i < a.length; i++) tmpA[63 - i] = a[a.length - i - 1];
-    for (let i = 0; i < b.length; i++) tmpB[63 - i] = b[b.length - i - 1];
-    for (let i = 63, tmp = 0; i >= 0; i--) {
-        tmp = tmpA[i] + tmpB[i] + (tmp >> 8);
-        c[i] = tmp & 0xff;
+const add512Into = (dst: TArg<Uint8Array>, src: TArg<Uint8Array>): void => {
+    const off = 64 - src.length;
+    let carry = 0;
+    for (let i = 63; i >= 0; i--) {
+        const j = i - off;
+        if (j < 0 && carry === 0) break;
+        const s = dst[i] + (j >= 0 ? src[j] : 0) + carry;
+        dst[i] = s & 0xff;
+        carry = s >> 8;
     }
-
-    return c;
 }
 
-const S = (input: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
-    PI[input[0]], PI[input[1]], PI[input[2]], PI[input[3]], PI[input[4]], PI[input[5]],
-    PI[input[6]], PI[input[7]], PI[input[8]], PI[input[9]], PI[input[10]], PI[input[11]],
-    PI[input[12]], PI[input[13]], PI[input[14]], PI[input[15]], PI[input[16]], PI[input[17]],
-    PI[input[18]], PI[input[19]], PI[input[20]], PI[input[21]], PI[input[22]], PI[input[23]],
-    PI[input[24]], PI[input[25]], PI[input[26]], PI[input[27]], PI[input[28]], PI[input[29]],
-    PI[input[30]], PI[input[31]], PI[input[32]], PI[input[33]], PI[input[34]], PI[input[35]],
-    PI[input[36]], PI[input[37]], PI[input[38]], PI[input[39]], PI[input[40]], PI[input[41]],
-    PI[input[42]], PI[input[43]], PI[input[44]], PI[input[45]], PI[input[46]], PI[input[47]],
-    PI[input[48]], PI[input[49]], PI[input[50]], PI[input[51]], PI[input[52]], PI[input[53]],
-    PI[input[54]], PI[input[55]], PI[input[56]], PI[input[57]], PI[input[58]], PI[input[59]],
-    PI[input[60]], PI[input[61]], PI[input[62]], PI[input[63]]
-]);
-
-const P = (input: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
-    input[0], input[8], input[16], input[24], input[32], input[40], input[48], input[56],
-    input[1], input[9], input[17], input[25], input[33], input[41], input[49], input[57],
-    input[2], input[10], input[18], input[26], input[34], input[42], input[50], input[58],
-    input[3], input[11], input[19], input[27], input[35], input[43], input[51], input[59], 
-    input[4], input[12], input[20], input[28], input[36], input[44], input[52], input[60],
-    input[5], input[13], input[21], input[29], input[37], input[45], input[53], input[61],
-    input[6], input[14], input[22], input[30], input[38], input[46], input[54], input[62],
-    input[7], input[15], input[23], input[31], input[39], input[47], input[55], input[63]
+// Substitution + Permutation in 1 function
+const SP = (input: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
+    PI[input[0]], PI[input[8]], PI[input[16]], PI[input[24]], PI[input[32]], PI[input[40]], PI[input[48]], PI[input[56]],
+    PI[input[1]], PI[input[9]], PI[input[17]], PI[input[25]], PI[input[33]], PI[input[41]], PI[input[49]], PI[input[57]],
+    PI[input[2]], PI[input[10]], PI[input[18]], PI[input[26]], PI[input[34]], PI[input[42]], PI[input[50]], PI[input[58]],
+    PI[input[3]], PI[input[11]], PI[input[19]], PI[input[27]], PI[input[35]], PI[input[43]], PI[input[51]], PI[input[59]], 
+    PI[input[4]], PI[input[12]], PI[input[20]], PI[input[28]], PI[input[36]], PI[input[44]], PI[input[52]], PI[input[60]],
+    PI[input[5]], PI[input[13]], PI[input[21]], PI[input[29]], PI[input[37]], PI[input[45]], PI[input[53]], PI[input[61]],
+    PI[input[6]], PI[input[14]], PI[input[22]], PI[input[30]], PI[input[38]], PI[input[46]], PI[input[54]], PI[input[62]],
+    PI[input[7]], PI[input[15]], PI[input[23]], PI[input[31]], PI[input[39]], PI[input[47]], PI[input[55]], PI[input[63]]
 ]);
 
 const L = (input: TArg<Uint8Array>): TRet<Uint8Array> => {
-    const result = new Uint8Array(BLOCKSIZE);
-
+    const result = new Uint8Array(BLOCKSIZE), view = createView(result);
     for (let i = 0; i < 8; i++) {
         const parts = new Uint32Array(2);
         const tmp = input.slice(i * 8, i * 8 + 8).reverse();
-
         for (let j = 0; j < 8; j++) {
             for (let k = 0; k < 8; k++) {
                 if ((tmp[7 - j] >> 7 - k) & 1) {
@@ -66,31 +49,30 @@ const L = (input: TArg<Uint8Array>): TRet<Uint8Array> => {
                 }
             }
         }
-
-        result.set(numberToBytesBE(parts[0], 4), i * 8);
-        result.set(numberToBytesBE(parts[1], 4), i * 8 + 4);
+        view.setUint32(i * 8, parts[0]);
+        view.setUint32(i * 8 + 4, parts[1]);
     }
 
     return result;
 }
 
-const LPS = (input: TArg<Uint8Array>): TRet<Uint8Array> => L(P(S(input)));
+const LPS = (input: TArg<Uint8Array>): TRet<Uint8Array> => L(SP(input));
 
 const E = (block: TArg<Uint8Array>, keys: TArg<Uint8Array>): TRet<Uint8Array> => {
     // block will be mutated
-    let c = xorBytes(block, keys);
-    block = LPS(xorBytes(block, C.subarray(0, 64))); c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C.subarray(64, 128))); c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C.subarray(128, 192))); c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C.subarray(192, 256))); c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C.subarray(256, 320))); c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C.subarray(320, 384))); c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C.subarray(384, 448))); c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C.subarray(448, 512))); c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C.subarray(512, 576))); c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C.subarray(576, 640))); c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C.subarray(640, 704))); c = xorBytes(LPS(c), block);
-    block = LPS(xorBytes(block, C.subarray(704, 768))); c = xorBytes(LPS(c), block);
+    const c = xorBytes(block, keys);
+    block.set(LPS(xorBytes(block, C.subarray(0, 64)))); c.set(xorBytes(LPS(c), block));
+    block.set(LPS(xorBytes(block, C.subarray(64, 128)))); c.set(xorBytes(LPS(c), block));
+    block.set(LPS(xorBytes(block, C.subarray(128, 192)))); c.set(xorBytes(LPS(c), block));
+    block.set(LPS(xorBytes(block, C.subarray(192, 256)))); c.set(xorBytes(LPS(c), block));
+    block.set(LPS(xorBytes(block, C.subarray(256, 320)))); c.set(xorBytes(LPS(c), block));
+    block.set(LPS(xorBytes(block, C.subarray(320, 384)))); c.set(xorBytes(LPS(c), block));
+    block.set(LPS(xorBytes(block, C.subarray(384, 448)))); c.set(xorBytes(LPS(c), block));
+    block.set(LPS(xorBytes(block, C.subarray(448, 512)))); c.set(xorBytes(LPS(c), block));
+    block.set(LPS(xorBytes(block, C.subarray(512, 576)))); c.set(xorBytes(LPS(c), block));
+    block.set(LPS(xorBytes(block, C.subarray(576, 640)))); c.set(xorBytes(LPS(c), block));
+    block.set(LPS(xorBytes(block, C.subarray(640, 704)))); c.set(xorBytes(LPS(c), block));
+    block.set(LPS(xorBytes(block, C.subarray(704, 768)))); c.set(xorBytes(LPS(c), block));
 
     return c;
 }
@@ -100,6 +82,11 @@ const G = (
     n: TArg<Uint8Array>,
     message: TArg<Uint8Array>
 ): TRet<Uint8Array> => xorBytes(xorBytes(E(LPS(xorBytes(n, hash)), message), n), message);
+
+const G2 = (
+    n: TArg<Uint8Array>,
+    message: TArg<Uint8Array>
+): TRet<Uint8Array> => xorBytes(xorBytes(E(LPS(n), message), n), message);
 
 /** Streebog (GOST R 34.11-2012) hash function */
 abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
@@ -134,7 +121,7 @@ abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
     digestInto(buf: TArg<Uint8Array>) {
         if(buf.length != this.outputLen) throw new Error("digestInto: Invalid buffer length");
         const message = copyBytes(this.buffer).reverse();
-        let n = new Uint8Array(this.blockLen),
+        const n = new Uint8Array(this.blockLen),
             sigma = new Uint8Array(this.blockLen),
             hash = new Uint8Array(this.blockLen).fill(this.is512 ? 0 : 1);
 
@@ -142,29 +129,27 @@ abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
         for (let i = message.length; i >= this.blockLen; i -= this.blockLen) {
             const pos: number = message.length - blocks * this.blockLen;
 
-            hash = G(n, hash, message.subarray(pos, pos + this.blockLen));
-            n = add512(n, _512);
-            sigma = add512(sigma, message.subarray(pos, pos + this.blockLen));
+            const block = message.subarray(pos, pos + this.blockLen);
+            hash.set(G(n, hash, block));
+            add512Into(n, _512);
+            add512Into(sigma, block);
             blocks++;
         }
 
-        let paddedMsg = new Uint8Array(this.blockLen);
+        const paddedMsg = new Uint8Array(this.blockLen);
         const msg = message.subarray(0, message.length - (blocks - 1) * 64);
         if (msg.length < this.blockLen) {
-            paddedMsg = pad1(paddedMsg, this.blockLen);
-
-            paddedMsg[this.blockLen - msg.length - 1] = 0x01;
-            for (let i = 0; i < msg.length; i++) paddedMsg[this.blockLen - msg.length + i] = msg[i];
+            const offset = this.blockLen - msg.length;
+            paddedMsg[offset - 1] = 1;
+            paddedMsg.set(msg, offset);
         }
 
-        hash = G(
-            _0,
-            G(_0, G(n, hash, paddedMsg), add512(n, numberToBytesBE(msg.length * 8, 4))),
-            add512(sigma, paddedMsg)
-        );
+        hash.set(G(n, hash, paddedMsg));
+        add512Into(n, numberToBytesBE(msg.length * 8, 4));
+        add512Into(sigma, paddedMsg);
+        hash.set(G2(G2(hash, n), sigma));
 
-        if (this.is512) buf.set(copyBytes(hash).reverse());
-        else buf.set(hash.slice(0, 32).reverse());
+        buf.set(hash.slice(0, this.outputLen).reverse());
         this.destroy();
     }
 }

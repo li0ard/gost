@@ -1,13 +1,13 @@
 // Generating round constants for Streebog (GOST R 34.11-2012)
 // Source: https://tc26.ru/upload/medialibrary/efb/streebog_constants_eng%20Rudskoi.pdf
 
-import { hexToBytes, bytesToHex, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { hexToBytes, bytesToHex, type TArg, type TRet, createView } from "@noble/hashes/utils.js";
 import { PI } from "../src/kuznyechik/const.js";
 import { pad1, xorBytes } from "../src/utils.js";
 import { numberToBytesBE } from "@noble/curves/utils.js";
 
 const BLOCKSIZE = 64;
-const _0020 = new Uint8Array([0, 0, 2, 0]);
+const _512 = new Uint8Array([0, 0, 2, 0]);
 const _0 = new Uint8Array(64);
 
 const add512 = (a: TArg<Uint8Array>, b: TArg<Uint8Array>): TRet<Uint8Array> => {
@@ -25,22 +25,15 @@ const add512 = (a: TArg<Uint8Array>, b: TArg<Uint8Array>): TRet<Uint8Array> => {
     return c;
 }
 
-const S = (input: TArg<Uint8Array>): TRet<Uint8Array> => {
-    const result = new Uint8Array(BLOCKSIZE);
-    for(let i = 0; i < BLOCKSIZE; i++) result[i] = PI[input[i]];
-
-    return result;
-}
-
-const P = (input: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
-    input[0], input[8], input[16], input[24], input[32], input[40], input[48], input[56],
-    input[1], input[9], input[17], input[25], input[33], input[41], input[49], input[57],
-    input[2], input[10], input[18], input[26], input[34], input[42], input[50], input[58],
-    input[3], input[11], input[19], input[27], input[35], input[43], input[51], input[59], 
-    input[4], input[12], input[20], input[28], input[36], input[44], input[52], input[60],
-    input[5], input[13], input[21], input[29], input[37], input[45], input[53], input[61],
-    input[6], input[14], input[22], input[30], input[38], input[46], input[54], input[62],
-    input[7], input[15], input[23], input[31], input[39], input[47], input[55], input[63]
+const SP = (input: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
+    PI[input[0]], PI[input[8]], PI[input[16]], PI[input[24]], PI[input[32]], PI[input[40]], PI[input[48]], PI[input[56]],
+    PI[input[1]], PI[input[9]], PI[input[17]], PI[input[25]], PI[input[33]], PI[input[41]], PI[input[49]], PI[input[57]],
+    PI[input[2]], PI[input[10]], PI[input[18]], PI[input[26]], PI[input[34]], PI[input[42]], PI[input[50]], PI[input[58]],
+    PI[input[3]], PI[input[11]], PI[input[19]], PI[input[27]], PI[input[35]], PI[input[43]], PI[input[51]], PI[input[59]], 
+    PI[input[4]], PI[input[12]], PI[input[20]], PI[input[28]], PI[input[36]], PI[input[44]], PI[input[52]], PI[input[60]],
+    PI[input[5]], PI[input[13]], PI[input[21]], PI[input[29]], PI[input[37]], PI[input[45]], PI[input[53]], PI[input[61]],
+    PI[input[6]], PI[input[14]], PI[input[22]], PI[input[30]], PI[input[38]], PI[input[46]], PI[input[54]], PI[input[62]],
+    PI[input[7]], PI[input[15]], PI[input[23]], PI[input[31]], PI[input[39]], PI[input[47]], PI[input[55]], PI[input[63]]
 ]);
 
 // Modificated MDS-matrix
@@ -64,8 +57,7 @@ const A_init = new Uint32Array([
 ]);
 
 const L = (input: TArg<Uint8Array>): TRet<Uint8Array> => {
-    const result = new Uint8Array(BLOCKSIZE);
-
+    const result = new Uint8Array(BLOCKSIZE), view = createView(result);
     for (let i = 0; i < 8; i++) {
         const parts = new Uint32Array(2);
         const tmp = input.slice(i * 8, i * 8 + 8).reverse();
@@ -79,15 +71,14 @@ const L = (input: TArg<Uint8Array>): TRet<Uint8Array> => {
                 }
             }
         }
-
-        result.set(numberToBytesBE(parts[0], 4), i * 8);
-        result.set(numberToBytesBE(parts[1], 4), i * 8 + 4);
+        view.setUint32(i * 8, parts[0]);
+        view.setUint32(i * 8 + 4, parts[1]);
     }
 
     return result;
 }
 
-const LPS = (input: TArg<Uint8Array>): TRet<Uint8Array> => L(P(S(input)));
+const LPS = (input: TArg<Uint8Array>): TRet<Uint8Array> => L(SP(input));
 
 const E = (block: TArg<Uint8Array>, keys: TArg<Uint8Array>): TRet<Uint8Array> => {
     let c = xorBytes(block, keys);
@@ -109,29 +100,28 @@ const G = (
 // Modificated Streebog-like 512 bit hash function (use LE instead of BE)
 const streeboglike512 = (buffer: TArg<Uint8Array>): TRet<Uint8Array> => {
     const message = buffer;
-    let n = new Uint8Array(64);
-    let sigma = new Uint8Array(64);
-    let hash = new Uint8Array(64);
+    const n = new Uint8Array(64),
+        sigma = new Uint8Array(64),
+        hash = new Uint8Array(64);
 
     let blocks: number = 1;
     for (let i = message.length; i >= 64; i -= 64) {
         const pos: number = message.length - blocks * 64;
 
-        hash = G(n, hash, message.subarray(pos, pos + 64));
-        n = add512(n, _0020);
-        sigma = add512(sigma, message.subarray(pos, pos + 64));
+        const block = message.subarray(pos, pos + 64);
+        hash.set(G(n, hash, block));
+        n.set(add512(n, _512));
+        sigma.set(add512(sigma, block));
         blocks++;
     }
 
-    let paddedMsg = new Uint8Array(64);
+    const paddedMsg = new Uint8Array(64);
     const msg = message.subarray(0, message.length - (blocks - 1) * 64);
     if (msg.length < 64) {
-        paddedMsg = pad1(paddedMsg, 64);
-
-        paddedMsg[64 - msg.length - 1] = 0x01;
-        for (let i = 0; i < msg.length; i++) paddedMsg[64 - msg.length + i] = msg[i];
+        const offset = 64 - msg.length;
+        paddedMsg[offset - 1] = 1;
+        paddedMsg.set(msg, offset);
     }
-
 
     return G(
         _0,
