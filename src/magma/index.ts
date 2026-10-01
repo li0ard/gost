@@ -49,9 +49,10 @@ export class Magma implements Cipher {
 
     /**
      * Magma (GOST R 34.12-2015 and GOST 28147-89) cipher
-     * @param key Encryption key
-     * @param sbox S-Box
-     * @param isLegacy Use GOST 28147-89 instead of GOST R 34.12-2015?
+     * 
+     * @param key - encryption key
+     * @param sbox - S-Box
+     * @param isLegacy - whether to use GOST 28147-89 instead of GOST R 34.12-2015
      */
     constructor(
         private key: TArg<Uint8Array>,

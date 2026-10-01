@@ -74,7 +74,8 @@ export class Kuznyechik implements Cipher {
     private roundKeys: Uint8Array[];
     /**
      * Kuznyechik (GOST R 34.12-2015) cipher
-     * @param key Encryption key
+     * 
+     * @param key - encryption key
      */
     constructor(key: TArg<Uint8Array>) {
         abytes(key, this.keySize, "key");

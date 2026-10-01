@@ -74,8 +74,8 @@ const _step = (
     return x;
 }
 
-/** GOST R 34.11-94 hash function */
-export class Gost341194 implements Hash<Gost341194> {
+/** Internal GOST R 34.11-94 hash class */
+export class _Gost341194 implements Hash<_Gost341194> {
     readonly blockLen = 32;
     readonly outputLen = 32;
     readonly canXOF = false;
@@ -90,13 +90,13 @@ export class Gost341194 implements Hash<Gost341194> {
     }
 
     /** Create hash instance */
-    static create(): Gost341194 { return new Gost341194(); }
+    static create(): _Gost341194 { return new _Gost341194(); }
 
     destroy() { clean(this.buffer); }
 
-    clone(): Gost341194 { return this._cloneInto(); }
-    _cloneInto(to?: Gost341194): Gost341194 {
-        to ||= new Gost341194();
+    clone(): _Gost341194 { return this._cloneInto(); }
+    _cloneInto(to?: _Gost341194): _Gost341194 {
+        to ||= new _Gost341194();
         to.buffer = new Uint8Array(this.buffer);
         to.sbox = this.sbox;
 
@@ -140,5 +140,17 @@ export class Gost341194 implements Hash<Gost341194> {
     }
 }
 
-/** GOST R 34.11-94 hash function */
-export const gost341194 = createHasher(Gost341194.create);
+/**
+ * GOST R 34.11-94 hash function
+ * 
+ * @param msg - message bytes to hash.
+ * @returns Digest bytes.
+ * @example
+ * ```ts
+ * import { gost341194 } from "@li0ard/gost/gost341194.js";
+ * 
+ * gost341194(new Uint8Array([97, 98, 99]));
+ * gost341194.create().update(new Uint8Array([97, 98, 99])).digest();
+ * ```
+ */
+export const gost341194 = createHasher(_Gost341194.create);

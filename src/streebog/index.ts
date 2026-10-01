@@ -180,35 +180,59 @@ abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
     }
 }
 
-/** Streebog-256 hash function*/
-export class Streebog256 extends Streebog<Streebog256> {
+/** Internal Streebog-256 hash class*/
+export class _Streebog256 extends Streebog<_Streebog256> {
     /** Streebog-256 (GOST R 34.11-2012) hash function */
     constructor() { super(false); }
 
     /** Create hash instance */
-    static create(): Streebog256 { return new Streebog256(); }
+    static create(): _Streebog256 { return new _Streebog256(); }
 
-    clone(): Streebog256 { return this._cloneInto(); }
-    _cloneInto(to?: Streebog256): Streebog256 {
-        return this._copyState(to ||= new Streebog256());
+    clone(): _Streebog256 { return this._cloneInto(); }
+    _cloneInto(to?: _Streebog256): _Streebog256 {
+        return this._copyState(to ||= new _Streebog256());
     }
 }
 
-/** Streebog-512 hash function*/
-export class Streebog512 extends Streebog<Streebog512> {
+/** Internal Streebog-512 hash class*/
+export class _Streebog512 extends Streebog<_Streebog512> {
     /** Streebog-512 (GOST R 34.11-2012) hash function */
     constructor() { super(true); }
 
     /** Create hash instance */
-    static create(): Streebog512 { return new Streebog512(); }
+    static create(): _Streebog512 { return new _Streebog512(); }
 
-    clone(): Streebog512 { return this._cloneInto(); }
-    _cloneInto(to?: Streebog512): Streebog512 {
-        return this._copyState(to ||= new Streebog512());
+    clone(): _Streebog512 { return this._cloneInto(); }
+    _cloneInto(to?: _Streebog512): _Streebog512 {
+        return this._copyState(to ||= new _Streebog512());
     }
 }
 
-/** Streebog-256 hash function*/
-export const streebog256 = createHasher(Streebog256.create);
-/** Streebog-512 hash function*/
-export const streebog512 = createHasher(Streebog512.create);
+/**
+ * Streebog-256 hash function
+ * 
+ * @param msg - message bytes to hash.
+ * @returns Digest bytes.
+ * @example
+ * ```ts
+ * import { streebog256 } from "@li0ard/gost/streebog.js";
+ * 
+ * streebog256(new Uint8Array([97, 98, 99]));
+ * streebog256.create().update(new Uint8Array([97, 98, 99])).digest();
+ * ```
+ */
+export const streebog256 = createHasher(_Streebog256.create);
+/**
+ * Streebog-512 hash function
+ * 
+ * @param msg - message bytes to hash.
+ * @returns Digest bytes.
+ * @example
+ * ```ts
+ * import { streebog512 } from "@li0ard/gost/streebog.js";
+ * 
+ * streebog512(new Uint8Array([97, 98, 99]));
+ * streebog512.create().update(new Uint8Array([97, 98, 99])).digest();
+ * ```
+ */
+export const streebog512 = createHasher(_Streebog512.create);
