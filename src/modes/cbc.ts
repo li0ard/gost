@@ -1,6 +1,6 @@
 import type { TArg, TRet } from "@noble/hashes/utils.js";
 import type { BlockMode, Cipher } from "../types.js";
-import { xorBytes } from "../utils.js";
+import { abytesAligned, xorBytes } from "../utils.js";
 import { MESH_MAX_DATA, meshing } from "./_keytransform.js";
 
 /**
@@ -10,14 +10,12 @@ import { MESH_MAX_DATA, meshing } from "./_keytransform.js";
  */
 export const cbc = (cipher: Cipher, iv: TArg<Uint8Array>, mesh?: boolean): BlockMode => {
     const bs = cipher.blockSize;
-    if (iv.length === 0 || iv.length % bs !== 0) throw new Error("Invalid IV size");
+    abytesAligned(iv, bs, "iv");
     if (mesh && iv.length !== bs) throw new Error("Key meshing requires a single-block IV");
 
     return Object.freeze({
         encrypt: (plaintext: TArg<Uint8Array>): TRet<Uint8Array> => {
-            if (plaintext.length === 0 || plaintext.length % bs !== 0)
-                throw new Error("Data not aligned");
-
+            abytesAligned(plaintext, bs, "plaintext");
             let activeCipher = cipher;
             let encrypter = activeCipher.encrypt.bind(activeCipher);
 
@@ -39,9 +37,7 @@ export const cbc = (cipher: Cipher, iv: TArg<Uint8Array>, mesh?: boolean): Block
             return out;
         },
         decrypt: (ciphertext: TArg<Uint8Array>): TRet<Uint8Array> => {
-            if (ciphertext.length === 0 || ciphertext.length % bs !== 0)
-                throw new Error("Data not aligned");
-
+            abytesAligned(ciphertext, bs, "ciphertext");
             let activeCipher = cipher;
             let decrypter = activeCipher.decrypt.bind(activeCipher);
             const r: Uint8Array[] = [];

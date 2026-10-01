@@ -1,6 +1,6 @@
-import type { TArg, TRet } from "@noble/hashes/utils.js";
+import { abytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import type { Cipher, StreamMode } from "../types.js";
-import { xorBytes } from "../utils.js";
+import { abytesAligned, xorBytes } from "../utils.js";
 
 /**
  * **EN:** Output Feedback (OFB) mode
@@ -9,10 +9,11 @@ import { xorBytes } from "../utils.js";
  */
 export const ofb = (cipher: Cipher, iv: TArg<Uint8Array>): StreamMode => {
     const bs = cipher.blockSize;
-    if (iv.length === 0 || iv.length % bs !== 0) throw new Error("Invalid IV size");
+    abytesAligned(iv, bs, "iv");
 
     return Object.freeze({
         crypt: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
+            abytes(msg, undefined, "msg");
             const r: Uint8Array[] = [];
             for (let i = 0; i < iv.length; i += bs) r.push(iv.subarray(i, i + bs));
 

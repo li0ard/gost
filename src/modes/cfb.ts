@@ -1,6 +1,6 @@
-import type { TArg, TRet } from "@noble/hashes/utils.js";
+import { abytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import type { BlockMode, Cipher } from "../types.js";
-import { xorBytes } from "../utils.js";
+import { abytesAligned, xorBytes } from "../utils.js";
 import { MESH_MAX_DATA, meshing } from "./_keytransform.js";
 
 /**
@@ -10,11 +10,12 @@ import { MESH_MAX_DATA, meshing } from "./_keytransform.js";
  */
 export const cfb = (cipher: Cipher, iv: TArg<Uint8Array>, mesh?: boolean): BlockMode => {
     const bs = cipher.blockSize;
-    if (iv.length === 0 || iv.length % bs !== 0) throw new Error("Invalid IV size");
+    abytesAligned(iv, bs, "iv");
     if (mesh && iv.length !== bs) throw new Error("Key meshing requires a single-block IV");
 
     return Object.freeze({
         encrypt: (plaintext: TArg<Uint8Array>): TRet<Uint8Array> => {
+            abytes(plaintext, undefined, "plaintext");
             let activeCipher = cipher;
             let encrypter = activeCipher.encrypt.bind(activeCipher);
 
@@ -39,6 +40,7 @@ export const cfb = (cipher: Cipher, iv: TArg<Uint8Array>, mesh?: boolean): Block
             return out;
         },
         decrypt: (ciphertext: TArg<Uint8Array>): TRet<Uint8Array> => {
+            abytes(ciphertext, undefined, "ciphertext");
             let activeCipher = cipher;
             let encrypter = activeCipher.encrypt.bind(activeCipher);
             

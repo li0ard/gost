@@ -30,6 +30,7 @@ import { weierstrass } from "@noble/curves/abstract/weierstrass.js";
 import { createKeygen, type AffinePoint } from "@noble/curves/abstract/curve.js";
 import type { ECDSA, SignOpts } from "../types.js";
 import { createStreebogHmacDrbg } from "./drbg.js";
+import { ahash } from "@noble/hashes/utils.js";
 
 /** Swap `x` and `y` in point bytes */
 const swapPoint = (point: TArg<Uint8Array>): TRet<Uint8Array> => concatBytes(
@@ -77,6 +78,8 @@ export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
      * ```
      */
     const sign = (secretKey: TArg<Uint8Array>, digest: TArg<Uint8Array>, opts?: SignOpts) => {
+        abytes(secretKey);
+        abytes(digest);
         const { rand, extraEntropy } = opts ?? {};
         const d = Fn.fromBytes(secretKey);
         if(!Fn.isValidNot0(d)) throw new Error("Invalid private key");
@@ -111,8 +114,9 @@ export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
         digest: TArg<Uint8Array>,
         signature: TArg<Uint8Array>
     ) => {
-        if(signature.length != lengths.signature) throw new Error("Invalid signature");
-
+        abytes(publicKey);
+        abytes(digest);
+        abytes(signature, lengths.signature, "signature");
         const r = bytesToNumberBE(signature.subarray(0, parameters.length)),
             s = bytesToNumberBE(signature.subarray(parameters.length));
         if(!Fn.isValidNot0(r) || !Fn.isValidNot0(s)) return false;
@@ -139,6 +143,10 @@ export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
         publicKeyB: TArg<Uint8Array>,
         ukm: TArg<Uint8Array>
     ): TRet<Uint8Array> => {
+        ahash(hash);
+        abytes(secretKeyA);
+        abytes(publicKeyB);
+        abytes(ukm);
         const key = Point.fromBytes(publicKeyB)
         .multiply(Fn.fromBytes(secretKeyA))
         .multiply(Fn.mul(parameters.h, bytesToNumberBE(ukm)));

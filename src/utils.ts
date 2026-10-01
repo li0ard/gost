@@ -1,4 +1,4 @@
-import type { TArg, TRet } from "@noble/hashes/utils.js";
+import { abytes, anumber, type TArg, type TRet } from "@noble/hashes/utils.js";
 
 export const xorBytes = (a: TArg<Uint8Array>, b: TArg<Uint8Array>): TRet<Uint8Array> => {
     const mlen = Math.min(a.length, b.length);
@@ -53,4 +53,21 @@ export const unpad2 = (data: TArg<Uint8Array>, blockSize: number): TRet<Uint8Arr
 export const pad3 = (data: TArg<Uint8Array>, blockSize: number): TRet<Uint8Array> => {
     if(getPadLength(data.length, blockSize) == 0) return data as TRet<Uint8Array>;
     return pad2(data, blockSize);
+}
+
+const atitle = (title: string): string => title ? `"${title}" ` : '';
+
+export const abytesAligned = (
+    value: TArg<Uint8Array>,
+    blockSize: number,
+    title: string = ""
+): TRet<Uint8Array> => {
+    abytes(value);
+    anumber(blockSize);
+    if (value.length !== 0 && value.length % blockSize === 0) return value as TRet<Uint8Array>;
+    
+    const ofLen = ` of length aligned to ${blockSize}`;
+    const got = `length=${value.length}`;
+    const message = atitle(title) + 'expected Uint8Array' + ofLen + ', got ' + got;
+    throw new RangeError(message);
 }

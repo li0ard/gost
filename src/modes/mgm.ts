@@ -1,4 +1,4 @@
-import { concatBytes, copyBytes, type TArg, type TRet, bytesToNumberBE, equalBytes, numberToBytesBE } from "@noble/curves/utils.js";
+import { abytes, concatBytes, copyBytes, type TArg, type TRet, bytesToNumberBE, equalBytes, numberToBytesBE } from "@noble/curves/utils.js";
 import type { AEADMode, Cipher } from "../types.js";
 import { pad1, xorBytes, xorBytesInPlace } from "../utils.js";
 import { gf64Multiply, gf128Multiply } from "../gf/index.js"; 
@@ -14,8 +14,7 @@ export const mgm = (cipher: Cipher, nonce: TArg<Uint8Array>, tagSize = cipher.bl
         throw new Error("Only 64/128-bit blocksizes allowed");
     if (tagSize < 4 || tagSize > bs)
         throw new Error("Invalid tagSize");
-    if (nonce.length !== bs)
-        throw new Error("Nonce length must be equal to cipher's blocksize");
+    abytes(nonce, bs, "nonce");
     if ((nonce[0] & 0x80) !== 0)
         throw new Error("Nonce must not have its high bit set");
 
@@ -71,6 +70,8 @@ export const mgm = (cipher: Cipher, nonce: TArg<Uint8Array>, tagSize = cipher.bl
 
     return Object.freeze({
         seal: (plaintext: TArg<Uint8Array>, aad: TArg<Uint8Array> = new Uint8Array()): TRet<Uint8Array> => {
+            abytes(plaintext, undefined, "plaintext");
+            abytes(aad, undefined, "aad");
             validateSizes(plaintext, aad);
             const icn = copyBytes(nonce),
                 ciphertext = crypt(icn, plaintext);
@@ -78,6 +79,8 @@ export const mgm = (cipher: Cipher, nonce: TArg<Uint8Array>, tagSize = cipher.bl
         },
 
         open: (ciphertext: TArg<Uint8Array>, aad: TArg<Uint8Array> = new Uint8Array()): TRet<Uint8Array> => {
+            abytes(ciphertext, undefined, "ciphertext");
+            abytes(aad, undefined, "aad");
             validateSizes(ciphertext, aad);
             if (ciphertext.length < tagSize)
                 throw new Error("Ciphertext is shorter than tag size");

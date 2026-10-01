@@ -10,7 +10,7 @@
 import { bytesToNumberBE, bytesToNumberLE, concatBytes, numberToBytesBE, numberToBytesLE, type TArg, type TRet } from "@noble/curves/utils.js";
 import { ID_TC26_GOST_28147_PARAM_Z, magmaKeySequences } from "./const.js";
 import type { Cipher } from "../types.js";
-import { createView } from "@noble/hashes/utils.js";
+import { abool, abytes, createView } from "@noble/hashes/utils.js";
 
 const BLOCKSIZE = 8;
 
@@ -58,11 +58,13 @@ export class Magma implements Cipher {
         private sbox: TArg<Uint8Array> = ID_TC26_GOST_28147_PARAM_Z,
         public isLegacy: boolean = false
     ) {
-        if (key.length !== this.keySize) throw new Error("Invalid key length");
+        abytes(key, this.keySize, "key");
+        abytes(sbox, 64, "sbox");
+        abool(isLegacy, "isLegacy");
     }
 
     proceedBlock(block: TArg<Uint8Array>, sequence: number[]): TRet<Uint8Array> {
-        if (block.length !== this.blockSize) throw new Error("Invalid block size");
+        abytes(block, this.blockSize, "block");
         const roundKeys = extendKey(this.key, sequence, this.isLegacy);
 
         const F = block.subarray(0, 4), S = block.subarray(4, 8);

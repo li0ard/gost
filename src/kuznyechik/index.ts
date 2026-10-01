@@ -2,7 +2,7 @@
  * Implementation of GOST R 34.12-2015 ([RFC 7801](https://datatracker.ietf.org/doc/html/rfc7801.html)) "Kuznyechik" block cipher
  * @module
  */
-import { copyBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { abytes, copyBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { ITER, L, PI, PI_REV } from "./const.js";
 import { xorBytes } from "../utils.js";
 import type { Cipher } from "../types.js";
@@ -77,7 +77,7 @@ export class Kuznyechik implements Cipher {
      * @param key Encryption key
      */
     constructor(key: TArg<Uint8Array>) {
-        if (key.length !== this.keySize) throw new Error("Invalid key length");
+        abytes(key, this.keySize, "key");
 
         const roundKeys = Array<Uint8Array>(10);
         roundKeys[0] = key.slice(0, this.blockSize);
@@ -119,8 +119,7 @@ export class Kuznyechik implements Cipher {
     }
 
     encrypt(plaintext: TArg<Uint8Array>): TRet<Uint8Array> {
-        if (plaintext.length !== this.blockSize)
-            throw new Error("Invalid block size");
+        abytes(plaintext, this.blockSize, "plaintext");
 
         const currentBlock = LLS(xorBytes(this.roundKeys[0], plaintext));
         currentBlock.set(LLS(xorBytes(this.roundKeys[1], currentBlock)));
@@ -136,8 +135,7 @@ export class Kuznyechik implements Cipher {
     }
 
     decrypt(ciphertext: TArg<Uint8Array>): TRet<Uint8Array> {
-        if (ciphertext.length !== this.blockSize)
-            throw new Error("Invalid block size");
+        abytes(ciphertext, this.blockSize, "ciphertext");
 
         const currentBlock = xorBytes(this.roundKeys[9], ciphertext);
         currentBlock.set(xorBytes(this.roundKeys[8], SLLr(currentBlock)));

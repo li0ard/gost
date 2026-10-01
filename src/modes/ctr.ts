@@ -2,7 +2,7 @@ import { numberToBytesBE, concatBytes, type TArg, type TRet } from "@noble/curve
 import type { Cipher, CipherCtor, StreamMode } from "../types.js";
 import { xorBytes } from "../utils.js";
 import { acpkm } from "./_keytransform.js";
-import { createView } from "@noble/hashes/utils.js";
+import { abool, abytes, createView } from "@noble/hashes/utils.js";
 
 const C1 = 0x01010104, C2 = 0x01010101;
 
@@ -18,7 +18,9 @@ export const ctr = (
     _isAcpkmOmac?: boolean
 ): StreamMode => {
     const halfBlockSize = cipher.blockSize / 2;
-    if (iv.length !== halfBlockSize) throw new Error("Invalid IV size");
+    abytes(iv, halfBlockSize, "iv");
+    if(isAcpkm) abool(isAcpkm);
+    if(_isAcpkmOmac) abool(_isAcpkmOmac);
     const ctrMax = 1n << (8n * BigInt(halfBlockSize)),
         maxSize = ctrMax * BigInt(cipher.blockSize),
         acpkmSectionSize = _isAcpkmOmac
@@ -28,6 +30,7 @@ export const ctr = (
 
     return Object.freeze({
         crypt: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
+            abytes(msg, undefined, "msg");
             let encrypter = cipher.encrypt.bind(cipher);
             if (BigInt(msg.length) > maxSize) throw new Error("Too big data");
 
@@ -54,7 +57,7 @@ export const ctr = (
  * **RU:** Режим гаммирования (ГОСТ 28147-89)
  */
 export const cnt = (cipher: Cipher, iv: TArg<Uint8Array>): StreamMode => {
-    if(iv.length !== cipher.blockSize) throw new Error("Invalid IV size");
+    abytes(iv, cipher.blockSize, "iv");
 
     const incrementCounter = (ctr: TArg<Uint8Array>) => {
         const view = createView(ctr);
@@ -66,6 +69,7 @@ export const cnt = (cipher: Cipher, iv: TArg<Uint8Array>): StreamMode => {
 
     return Object.freeze({
         crypt: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
+            abytes(msg, undefined, "msg");
             const ctr = cipher.encrypt(iv),
                 output = new Uint8Array(msg.length);
             for (let i = 0; i < msg.length; i += cipher.blockSize) {

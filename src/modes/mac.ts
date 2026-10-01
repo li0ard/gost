@@ -1,4 +1,4 @@
-import { bytesToNumberLE, numberToBytesLE, concatBytes, type TArg, type TRet } from "@noble/curves/utils.js";
+import { abytes, bytesToNumberLE, numberToBytesLE, concatBytes, type TArg, type TRet } from "@noble/curves/utils.js";
 import type { Cipher, CipherCtor, MACMode } from "../types.js";
 import { pad1, pad3, xorBytes } from "../utils.js";
 import { magmaKeySequences, Magma } from "../magma/index.js";
@@ -36,6 +36,7 @@ export const mac = (cipher: Cipher): MACMode => {
 
     return Object.freeze({
         compute: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
+            abytes(msg, undefined, "msg");
             const n = Math.ceil(msg.length / bs) || 1;
             const lastBlockIsFull = msg.length > 0 && msg.length % bs === 0;
             const tailOffset = (n - 1) * bs;
@@ -68,29 +69,34 @@ export const mac = (cipher: Cipher): MACMode => {
 export const mac_legacy = (
     cipher: Magma,
     iv: TArg<Uint8Array> = new Uint8Array(cipher.blockSize)
-): MACMode => Object.freeze({
-    compute: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
-        const paddedData = pad1(msg, cipher.blockSize);
+): MACMode => {
+    abytes(iv, undefined, "iv");
 
-        let prev0 = bytesToNumberLE(iv.subarray(4, 8)),
-            prev1 = bytesToNumberLE(iv.subarray(0, 4));
-        const feedback = new Uint8Array(cipher.blockSize);
-        for (let i = 0; i < paddedData.length; i += cipher.blockSize) {
-            feedback.set(numberToBytesLE(prev1, 4), 0);
-            feedback.set(numberToBytesLE(prev0, 4), 4);
+    return Object.freeze({
+        compute: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
+            abytes(msg, undefined, "msg");
+            const paddedData = pad1(msg, cipher.blockSize);
 
-            const out = cipher.proceedBlock(
-                xorBytes(paddedData.subarray(i, i + cipher.blockSize), feedback),
-                magmaKeySequences.MAC
-            );
+            let prev0 = bytesToNumberLE(iv.subarray(4, 8)),
+                prev1 = bytesToNumberLE(iv.subarray(0, 4));
+            const feedback = new Uint8Array(cipher.blockSize);
+            for (let i = 0; i < paddedData.length; i += cipher.blockSize) {
+                feedback.set(numberToBytesLE(prev1, 4), 0);
+                feedback.set(numberToBytesLE(prev0, 4), 4);
 
-            prev0 = bytesToNumberLE(out.subarray(0, 4));
-            prev1 = bytesToNumberLE(out.subarray(4, 8));
+                const out = cipher.proceedBlock(
+                    xorBytes(paddedData.subarray(i, i + cipher.blockSize), feedback),
+                    magmaKeySequences.MAC
+                );
+
+                prev0 = bytesToNumberLE(out.subarray(0, 4));
+                prev1 = bytesToNumberLE(out.subarray(4, 8));
+            }
+
+            return concatBytes(numberToBytesLE(prev1, 4), numberToBytesLE(prev0, 4));
         }
-
-        return concatBytes(numberToBytesLE(prev1, 4), numberToBytesLE(prev0, 4));
-    }
-});
+    });
+}
 
 /**
  * **EN:** Message Authentication Code with Advance Cryptographic Prolongation of Key Material (OMAC-ACPKM) mode
@@ -106,6 +112,7 @@ export const omac_acpkm = (cipher: Cipher): MACMode => {
 
     return Object.freeze({
         compute: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
+            abytes(msg, undefined, "msg");
             const tailOffset = msg.length % bs === 0
                 ? msg.length - bs
                 : msg.length - (msg.length % bs);
