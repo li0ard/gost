@@ -79,64 +79,98 @@ export class _Gost341194 implements Hash<_Gost341194> {
     readonly blockLen = 32;
     readonly outputLen = 32;
     readonly canXOF = false;
-    private buffer: TArg<Uint8Array>;
+    private buffer = new Uint8Array(32);
+    private pos = 0;
+    private h = new Uint8Array(32);
+    private len = 0n;
+    private checksum = 0n;
 
     /** GOST R 34.11-94 hash function */
     constructor(
         private sbox: TArg<Uint8Array> = ID_GOSTR_3411_94_CRYPTOPRO_PARAM_SET
     ) {
         abytes(sbox, 64, "sbox");
-        this.buffer = new Uint8Array();
     }
 
     /** Create hash instance */
     static create(): _Gost341194 { return new _Gost341194(); }
 
-    destroy() { clean(this.buffer); }
+    destroy() {
+        clean(this.buffer, this.h);
+        this.pos = 0;
+        this.len = 0n;
+        this.checksum = 0n;
+    }
 
     clone(): _Gost341194 { return this._cloneInto(); }
     _cloneInto(to?: _Gost341194): _Gost341194 {
-        to ||= new _Gost341194();
-        to.buffer = new Uint8Array(this.buffer);
+        to ||= new _Gost341194(this.sbox);
         to.sbox = this.sbox;
+        to.buffer.set(this.buffer);
+        to.pos = this.pos;
+        to.h.set(this.h);
+        to.len = this.len;
+        to.checksum = this.checksum;
 
         return to;
     }
 
+    private processBlock(block: TArg<Uint8Array>) {
+        const rev = copyBytes(block).reverse();
+        this.len += 256n;
+        this.checksum = (this.checksum + bytesToNumberBE(rev)) & r;
+        this.h.set(_step(this.h, rev, this.sbox));
+    }
+
     update(data: TArg<Uint8Array>): this {
         abytes(data);
-        this.buffer = concatBytes(this.buffer, data);
+        let offset = 0;
+        if (this.pos > 0) {
+            const take = Math.min(this.blockLen - this.pos, data.length);
+            this.buffer.set(data.subarray(0, take), this.pos);
+            this.pos += take;
+            offset = take;
+            if (this.pos === this.blockLen) {
+                this.processBlock(this.buffer);
+                this.pos = 0;
+            }
+        }
+
+        for (; offset + this.blockLen <= data.length; offset += this.blockLen)
+            this.processBlock(data.subarray(offset, offset + this.blockLen));
+
+        if (offset < data.length) {
+            this.buffer.set(data.subarray(offset), 0);
+            this.pos = data.length - offset;
+        }
+
         return this;
     }
 
     digestInto(buf: TArg<Uint8Array>) {
         aoutput(buf, this);
-        let len = 0n, checksum = 0n;
-        const h = new Uint8Array(this.blockLen);
-        for(let i = 0; i < this.buffer.length; i += this.blockLen) {
-            let part = this.buffer.slice(i, i + this.blockLen).reverse();
-            len += BigInt(part.length) * 8n;
-
-            checksum = (checksum + bytesToNumberBE(part)) & r;
-            if(part.length < this.blockLen)
-                part = numberToBytesBE(bytesToNumberBE(part), this.blockLen);
-            h.set(_step(h, part, this.sbox));
+        if (this.pos > 0) {
+            const part = new Uint8Array(this.blockLen);
+            part.set(this.buffer.slice(0, this.pos).reverse(), this.blockLen - this.pos);
+            this.len += BigInt(this.pos) * 8n;
+            this.checksum = (this.checksum + bytesToNumberBE(part)) & r;
+            this.h.set(_step(this.h, part, this.sbox));
         }
 
-        h.set(_step(
-            _step(h, numberToBytesBE(len, this.blockLen), this.sbox),
-            numberToBytesBE(checksum, this.blockLen),
+        const res = _step(
+            _step(this.h, numberToBytesBE(this.len, this.blockLen), this.sbox),
+            numberToBytesBE(this.checksum, this.blockLen),
             this.sbox
-        ));
-        buf.set(h.reverse());
+        );
+        buf.set(res.reverse());
         this.destroy();
     }
 
-    digest(): TRet<Uint8Array> { 
-        const buffer = new Uint8Array(this.outputLen);
-        this.digestInto(buffer);
+    digest(): TRet<Uint8Array> {
+        const out = new Uint8Array(this.outputLen);
+        this.digestInto(out);
 
-        return buffer;
+        return out;
     }
 }
 
