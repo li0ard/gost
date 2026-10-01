@@ -2,7 +2,7 @@
  * Implementation of GOST R 34.11-2012 ([RFC 6986](https://datatracker.ietf.org/doc/html/rfc6986.html)) "Streebog" hash function
  * @module
  */
-import { concatBytes, copyBytes, createHasher, createView, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { abool, abytes, aoutput, clean, copyBytes, createHasher, createView, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { A, C } from "./const.js";
 import { PI } from "../kuznyechik/const.js";
 import { xorBytes } from "../utils.js";
@@ -10,7 +10,6 @@ import { numberToBytesBE } from "@noble/curves/utils.js";
 
 const BLOCKSIZE = 64;
 const _512 = new Uint8Array([0, 0, 2, 0]);
-const _0 = new Uint8Array(64);
 
 const add512Into = (dst: TArg<Uint8Array>, src: TArg<Uint8Array>): void => {
     const off = 64 - src.length;
@@ -78,78 +77,105 @@ const E = (block: TArg<Uint8Array>, keys: TArg<Uint8Array>): TRet<Uint8Array> =>
 }
 
 const G = (
-    hash: TArg<Uint8Array>,
     n: TArg<Uint8Array>,
+    hash: TArg<Uint8Array>,
     message: TArg<Uint8Array>
-): TRet<Uint8Array> => xorBytes(xorBytes(E(LPS(xorBytes(n, hash)), message), n), message);
+): TRet<Uint8Array> => xorBytes(xorBytes(E(LPS(xorBytes(n, hash)), message), hash), message);
 
 const G2 = (
-    n: TArg<Uint8Array>,
+    hash: TArg<Uint8Array>,
     message: TArg<Uint8Array>
-): TRet<Uint8Array> => xorBytes(xorBytes(E(LPS(n), message), n), message);
+): TRet<Uint8Array> => xorBytes(xorBytes(E(LPS(hash), message), hash), message);
 
 /** Streebog (GOST R 34.11-2012) hash function */
 abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
     readonly blockLen = BLOCKSIZE;
     readonly outputLen: number;
     readonly canXOF = false;
-    protected buffer: Uint8Array;
+    protected buffer = new Uint8Array(BLOCKSIZE);
+    protected pos = 0;
+    protected hash: Uint8Array;
+    protected n: Uint8Array;
+    protected sigma: Uint8Array;
 
     abstract _cloneInto(to?: T): T;
     abstract clone(): T;
 
     /** Streebog (GOST R 34.11-2012) hash function */
     constructor(private is512: boolean) {
-        this.buffer = new Uint8Array();
+        abool(is512);
         this.outputLen = is512 ? 64 : 32;
+        this.hash = new Uint8Array(this.blockLen).fill(is512 ? 0 : 1);
+        this.n = new Uint8Array(this.blockLen);
+        this.sigma = new Uint8Array(this.blockLen);
     }
 
-    destroy() { this.buffer = new Uint8Array(); }
+    destroy() {
+        clean(this.buffer, this.n, this.sigma);
+        this.hash.fill(this.is512 ? 0 : 1);
+        this.pos = 0;
+    }
+
+    protected _copyState(to: T): T {
+        to.buffer.set(this.buffer);
+        to.pos = this.pos;
+        to.hash.set(this.hash);
+        to.n.set(this.n);
+        to.sigma.set(this.sigma);
+        return to;
+    }
+
+    private processBlock(block: TArg<Uint8Array>) {
+        const rev = copyBytes(block).reverse();
+        this.hash.set(G(this.n, this.hash, rev));
+        add512Into(this.n, _512);
+        add512Into(this.sigma, rev);
+    }
 
     update(data: TArg<Uint8Array>): this {
-        this.buffer = concatBytes(this.buffer, data);
+        abytes(data);
+        let offset = 0;
+        if (this.pos > 0) {
+            const take = Math.min(this.blockLen - this.pos, data.length);
+            this.buffer.set(data.subarray(0, take), this.pos);
+            this.pos += take;
+            offset = take;
+            if (this.pos === this.blockLen) {
+                this.processBlock(this.buffer);
+                this.pos = 0;
+            }
+        }
+
+        for (; offset + this.blockLen <= data.length; offset += this.blockLen)
+            this.processBlock(data.subarray(offset, offset + this.blockLen));
+
+        if (offset < data.length) {
+            this.buffer.set(data.subarray(offset), 0);
+            this.pos = data.length - offset;
+        }
+
         return this;
     }
 
-    digest(): TRet<Uint8Array> { 
-        const buffer = new Uint8Array(this.outputLen);
-        this.digestInto(buffer);
-
-        return buffer;
+    digest(): TRet<Uint8Array> {
+        const out = new Uint8Array(this.outputLen);
+        this.digestInto(out);
+        return out;
     }
 
     digestInto(buf: TArg<Uint8Array>) {
-        if(buf.length != this.outputLen) throw new Error("digestInto: Invalid buffer length");
-        const message = copyBytes(this.buffer).reverse();
-        const n = new Uint8Array(this.blockLen),
-            sigma = new Uint8Array(this.blockLen),
-            hash = new Uint8Array(this.blockLen).fill(this.is512 ? 0 : 1);
-
-        let blocks: number = 1;
-        for (let i = message.length; i >= this.blockLen; i -= this.blockLen) {
-            const pos: number = message.length - blocks * this.blockLen;
-
-            const block = message.subarray(pos, pos + this.blockLen);
-            hash.set(G(n, hash, block));
-            add512Into(n, _512);
-            add512Into(sigma, block);
-            blocks++;
-        }
-
+        aoutput(buf, this);
         const paddedMsg = new Uint8Array(this.blockLen);
-        const msg = message.subarray(0, message.length - (blocks - 1) * 64);
-        if (msg.length < this.blockLen) {
-            const offset = this.blockLen - msg.length;
-            paddedMsg[offset - 1] = 1;
-            paddedMsg.set(msg, offset);
-        }
+        const offset = this.blockLen - this.pos;
+        paddedMsg.set(this.buffer.slice(0, this.pos).reverse(), offset);
+        paddedMsg[offset - 1] = 1;
 
-        hash.set(G(n, hash, paddedMsg));
-        add512Into(n, numberToBytesBE(msg.length * 8, 4));
-        add512Into(sigma, paddedMsg);
-        hash.set(G2(G2(hash, n), sigma));
+        this.hash.set(G(this.n, this.hash, paddedMsg));
+        add512Into(this.n, numberToBytesBE(this.pos * 8, 4));
+        add512Into(this.sigma, paddedMsg);
+        this.hash.set(G2(G2(this.hash, this.n), this.sigma));
 
-        buf.set(hash.slice(0, this.outputLen).reverse());
+        buf.set(this.hash.slice(0, this.outputLen).reverse());
         this.destroy();
     }
 }
@@ -164,10 +190,7 @@ export class Streebog256 extends Streebog<Streebog256> {
 
     clone(): Streebog256 { return this._cloneInto(); }
     _cloneInto(to?: Streebog256): Streebog256 {
-        to ||= new Streebog256();
-        to.buffer = new Uint8Array(this.buffer);
-
-        return to;
+        return this._copyState(to ||= new Streebog256());
     }
 }
 
@@ -181,10 +204,7 @@ export class Streebog512 extends Streebog<Streebog512> {
 
     clone(): Streebog512 { return this._cloneInto(); }
     _cloneInto(to?: Streebog512): Streebog512 {
-        to ||= new Streebog512();
-        to.buffer = new Uint8Array(this.buffer);
-
-        return to;
+        return this._copyState(to ||= new Streebog512());
     }
 }
 
