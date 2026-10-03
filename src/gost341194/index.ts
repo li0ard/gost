@@ -4,7 +4,7 @@
  */
 import { abytes, aoutput, clean, concatBytes, copyBytes, createHasher, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { Magma } from "../magma/index.js";
-import { ID_GOSTR_3411_94_CRYPTOPRO_PARAM_SET } from "../magma/const.js";
+import { GOSTR_3411_94_CRYPTOPRO_PARAM_SET } from "../magma/const.js";
 import { bytesToNumberBE, numberToBytesBE } from "@noble/curves/utils.js";
 import { xorBytes } from "../utils.js";
 
@@ -87,7 +87,7 @@ export class _Gost341194 implements Hash<_Gost341194> {
 
     /** GOST R 34.11-94 hash function */
     constructor(
-        private sbox: TArg<Uint8Array> = ID_GOSTR_3411_94_CRYPTOPRO_PARAM_SET
+        private sbox: TArg<Uint8Array> = GOSTR_3411_94_CRYPTOPRO_PARAM_SET
     ) {
         abytes(sbox, 64, "sbox");
     }

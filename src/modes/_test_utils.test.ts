@@ -14,5 +14,5 @@ export const PT_MAGMA = hexToBytes("92def06b3c130a59db54c704f8189d204a98fb2e67a8
 
 export const _kuznyechik = new Kuznyechik(KEY_KUZNYECHIK);
 export const _magma = new Magma(KEY_MAGMA);
-export const _magma2 = new MagmaLegacy(KEY_MAGMA2, magmaSboxes.ID_GOST_28147_89_TEST_PARAM_SET);
+export const _magma2 = new MagmaLegacy(KEY_MAGMA2, magmaSboxes.GOST_28147_89_TEST_PARAM_SET);
 export const _magma_acpkm = new Magma(KEY_KUZNYECHIK);

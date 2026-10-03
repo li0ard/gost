@@ -3,12 +3,12 @@
  * "Magma" block ciphers
  * 
  * Differences between GOST R 34.12-2015 and GOST 28147-89:
- * - GOST R 34.12-2015 uses fixed S-Box (`ID_TC26_GOST_28147_PARAM_Z`)
+ * - GOST R 34.12-2015 uses fixed S-Box (`TC26_GOST_28147_PARAM_Z`)
  * - GOST R 34.12-2015 uses BE byte order (instead of LE in GOST 28147-89)
  * @module
  */
 import { bytesToNumberBE, bytesToNumberLE, concatBytes, numberToBytesBE, numberToBytesLE, type TArg, type TRet } from "@noble/curves/utils.js";
-import { ID_GOST_28147_89_CRYPTO_PRO_A_PARAM_SET, ID_TC26_GOST_28147_PARAM_Z, magmaKeySequences } from "./const.js";
+import { GOST_28147_89_CRYPTO_PRO_A_PARAM_SET, TC26_GOST_28147_PARAM_Z, magmaKeySequences } from "./const.js";
 import type { Cipher } from "../types.js";
 import { abool, abytes, createView } from "@noble/hashes/utils.js";
 
@@ -56,7 +56,7 @@ export class Magma implements Cipher {
      */
     constructor(
         private key: TArg<Uint8Array>,
-        private sbox: TArg<Uint8Array> = ID_TC26_GOST_28147_PARAM_Z,
+        private sbox: TArg<Uint8Array> = TC26_GOST_28147_PARAM_Z,
         public isLegacy: boolean = false
     ) {
         abytes(key, this.keySize, "key");
@@ -97,7 +97,7 @@ export class MagmaLegacy extends Magma {
     /** Shortcut for Magma (legacy variation) cipher */
     constructor(
         key: TArg<Uint8Array>,
-        sbox: TArg<Uint8Array> = ID_GOST_28147_89_CRYPTO_PRO_A_PARAM_SET
+        sbox: TArg<Uint8Array> = GOST_28147_89_CRYPTO_PRO_A_PARAM_SET
     ) {
         super(key, sbox, true);
     }

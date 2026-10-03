@@ -19,11 +19,11 @@
 import { bytesToNumberBE, concatBytes, type TArg, type TRet, randomBytes, abytes } from "@noble/curves/utils.js";
 import {
     type GostCurveParameters,
-    ID_GOSTR3410_2001_PARAM_SET_CC, ID_GOSTR3410_2001_TEST_PARAM_SET,
-    ID_GOSTR3410_2012_256_PARAM_SET_A, ID_GOSTR3410_2012_256_PARAM_SET_B,
-    ID_GOSTR3410_2012_256_PARAM_SET_C, ID_GOSTR3410_2012_256_PARAM_SET_D,
-    ID_GOSTR3410_2012_512_PARAM_SET_A, ID_GOSTR3410_2012_512_PARAM_SET_B,
-    ID_GOSTR3410_2012_512_PARAM_SET_C, ID_GOSTR3410_2012_512_TEST_PARAM_SET
+    GOSTR3410_2001_PARAM_SET_CC, GOSTR3410_2001_TEST_PARAM_SET,
+    GOSTR3410_2012_256_PARAM_SET_A, GOSTR3410_2012_256_PARAM_SET_B,
+    GOSTR3410_2012_256_PARAM_SET_C, GOSTR3410_2012_256_PARAM_SET_D,
+    GOSTR3410_2012_512_PARAM_SET_A, GOSTR3410_2012_512_PARAM_SET_B,
+    GOSTR3410_2012_512_PARAM_SET_C, GOSTR3410_2012_512_TEST_PARAM_SET
 } from "./const.js";
 import { getMinHashLength, mapHashToField } from "@noble/curves/abstract/modular.js";
 import { weierstrass } from "@noble/curves/abstract/weierstrass.js";
@@ -203,25 +203,25 @@ export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
 
 export type { GostCurveParameters } from "./const.js";
 /** GOST R 34.10-2001 CryptoCom curve */
-export const gost2001CC = gost3410(ID_GOSTR3410_2001_PARAM_SET_CC);
+export const gost2001CC = gost3410(GOSTR3410_2001_PARAM_SET_CC);
 /** GOST R 34.10-2001 test curve */
-export const gost2001Test = gost3410(ID_GOSTR3410_2001_TEST_PARAM_SET);
+export const gost2001Test = gost3410(GOSTR3410_2001_TEST_PARAM_SET);
 /** GOST R 34.10-2012 256 bit `A` curve */
-export const gost256A = gost3410(ID_GOSTR3410_2012_256_PARAM_SET_A);
+export const gost256A = gost3410(GOSTR3410_2012_256_PARAM_SET_A);
 /** GOST R 34.10-2012 256 bit `B` curve (aka CryptoPro `A` and `X-A`) */
-export const gost256B = gost3410(ID_GOSTR3410_2012_256_PARAM_SET_B);
+export const gost256B = gost3410(GOSTR3410_2012_256_PARAM_SET_B);
 /** GOST R 34.10-2012 256 bit `C` curve (aka CryptoPro `B`) */
-export const gost256C = gost3410(ID_GOSTR3410_2012_256_PARAM_SET_C);
+export const gost256C = gost3410(GOSTR3410_2012_256_PARAM_SET_C);
 /** GOST R 34.10-2012 256 bit `D` curve (aka CryptoPro `C` and `X-B`) */
-export const gost256D = gost3410(ID_GOSTR3410_2012_256_PARAM_SET_D);
+export const gost256D = gost3410(GOSTR3410_2012_256_PARAM_SET_D);
 /** GOST R 34.10-2012 512 bit test curve */
-export const gost512Test = gost3410(ID_GOSTR3410_2012_512_TEST_PARAM_SET);
+export const gost512Test = gost3410(GOSTR3410_2012_512_TEST_PARAM_SET);
 /** GOST R 34.10-2012 512 bit `A` curve */
-export const gost512A = gost3410(ID_GOSTR3410_2012_512_PARAM_SET_A);
+export const gost512A = gost3410(GOSTR3410_2012_512_PARAM_SET_A);
 /** GOST R 34.10-2012 512 bit `B` curve */
-export const gost512B = gost3410(ID_GOSTR3410_2012_512_PARAM_SET_B);
+export const gost512B = gost3410(GOSTR3410_2012_512_PARAM_SET_B);
 /** GOST R 34.10-2012 512 bit `C` curve */
-export const gost512C = gost3410(ID_GOSTR3410_2012_512_PARAM_SET_C);
+export const gost512C = gost3410(GOSTR3410_2012_512_PARAM_SET_C);
 
 /** Standard curves */
 export const CURVES = {

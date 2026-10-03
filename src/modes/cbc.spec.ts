@@ -28,7 +28,7 @@ describe("[CBC] Magma", () => {
 
     test("#2", () => {
         const ct = hexToBytes("cf9506a890323fd327dbf50b065dffbdd7fcb975b73b0dd83de52fb6c1a0eb1f");
-        const cipher = new MagmaLegacy(KEY_MAGMA, magmaSboxes.ID_GOST_28147_89_TEST_PARAM_SET);
+        const cipher = new MagmaLegacy(KEY_MAGMA, magmaSboxes.GOST_28147_89_TEST_PARAM_SET);
         const mode = cbc(cipher, iv);
 
         expect(mode.encrypt(pt)).toStrictEqual(ct);

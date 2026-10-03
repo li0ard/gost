@@ -30,7 +30,7 @@ describe("[CFB] Magma", () => {
         const iv = hexToBytes("0102030405060708");
         const pt = hexToBytes("112233445566778899AABBCCDD800000");
         const ct = hexToBytes("6EE84586DD2BCA0CAD3616940E164242");
-        const cipher = new MagmaLegacy(key, magmaSboxes.ID_GOSTR_3411_94_TEST_PARAM_SET);
+        const cipher = new MagmaLegacy(key, magmaSboxes.GOSTR_3411_94_TEST_PARAM_SET);
         const mode = cfb(cipher, iv);
 
         expect(mode.encrypt(pt)).toStrictEqual(ct);
