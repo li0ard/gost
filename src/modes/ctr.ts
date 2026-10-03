@@ -24,7 +24,7 @@ export const ctr = (
     const ctrMax = 1n << (8n * BigInt(halfBlockSize)),
         maxSize = ctrMax * BigInt(cipher.blockSize),
         acpkmSectionSize = _isAcpkmOmac
-        ? (cipher.blockSize == 16 ? 6 : 10)
+        ? (cipher.blockSize === 16 ? 6 : 10)
         : 2,
         CipherCtor = cipher.constructor as CipherCtor;
 

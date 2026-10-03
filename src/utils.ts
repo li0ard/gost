@@ -14,7 +14,7 @@ export const xorBytesInPlace = (a: TArg<Uint8Array>, b: TArg<Uint8Array>) => {
 
 export const getPadLength = (dataLength: number, blockSize: number): number => {
     if(dataLength < blockSize) return blockSize - dataLength;
-    if(dataLength % blockSize == 0) return 0;
+    if(dataLength % blockSize === 0) return 0;
     return blockSize - dataLength % blockSize;
 }
 
@@ -36,7 +36,7 @@ export const unpad2 = (data: TArg<Uint8Array>, blockSize: number): TRet<Uint8Arr
     let padIndex = -1;
 
     for (let i = lastBlock.length - 1; i >= 0; i--) {
-        if (lastBlock[i] == 0x80) {
+        if (lastBlock[i] === 0x80) {
             padIndex = i;
             break;
         }
@@ -51,7 +51,7 @@ export const unpad2 = (data: TArg<Uint8Array>, blockSize: number): TRet<Uint8Arr
 }
 
 export const pad3 = (data: TArg<Uint8Array>, blockSize: number): TRet<Uint8Array> => {
-    if(getPadLength(data.length, blockSize) == 0) return data as TRet<Uint8Array>;
+    if(getPadLength(data.length, blockSize) === 0) return data as TRet<Uint8Array>;
     return pad2(data, blockSize);
 }
 

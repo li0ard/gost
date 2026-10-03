@@ -1,5 +1,5 @@
-import { streebog256hmac } from "./hmac.js";
-import { numberToBytesBE, concatBytes, type TArg, type TRet } from "@noble/curves/utils.js";
+import { Streebog256HMAC } from "./hmac.js";
+import { numberToBytesBE, type TArg, type TRet } from "@noble/curves/utils.js";
 import { pbkdf2 } from "@noble/hashes/pbkdf2.js";
 import { streebog256, streebog512 } from "./streebog/index.js";
 import { gost341194 } from "./gost341194/index.js";
@@ -23,10 +23,10 @@ export const kdf_gostr3411_2012_256 = (
     key: TArg<Uint8Array>,
     label: TArg<Uint8Array>,
     seed: TArg<Uint8Array>
-): TRet<Uint8Array> => streebog256hmac(
-    key,
-    concatBytes(_1, label, _0, seed, _256)
-);
+): TRet<Uint8Array> => new Streebog256HMAC(key)
+    .update(_1).update(label).update(_0)
+    .update(seed).update(_256)
+    .digest();
 
 /** 
  * Key derivation function `KDF_TREE_GOSTR3411_2012_256`
@@ -48,14 +48,12 @@ export const kdf_tree_gostr3411_2012_256 = (
     const keymat = [];
     const length = numberToBytesBE(keys * 32 * 8, 2);
 
-    for(let i = 0; i < keys; i++)
-        keymat.push(streebog256hmac(key, concatBytes(
-            numberToBytesBE(i + 1, i_len),
-            label,
-            _0,
-            seed,
-            length
-        )));
+    for(let i = 0; i < keys; i++) keymat.push(new Streebog256HMAC(key)
+        .update(numberToBytesBE(i + 1, i_len))
+        .update(label).update(_0)
+        .update(seed).update(length)
+        .digest()
+    );
 
     return keymat;
 }
@@ -152,13 +150,13 @@ export const cpkdf = (
     for(let i = 0; i < password.length; i++) pin[i*4] = p[i];
 
     hasher.update(s);
-    if(password.length != 0) hasher.update(pin);
+    if(password.length !== 0) hasher.update(pin);
     const hash = hasher.digest();
 
     const c = new Uint8Array(bs);
     c.set(new TextEncoder().encode("DENEFH028.760246785.IUEFHWUIO.EF"));
     const m0 = new Uint8Array(bs), m1 = new Uint8Array(bs);
-    for(let j = 0; j < (password.length != 0 ? 2000 : 2); j++) {
+    for(let j = 0; j < (password.length !== 0 ? 2000 : 2); j++) {
         m0.set(xorBytes(c, _36));
         m1.set(xorBytes(c, _5C));
         hasher.update(m0).update(hash).update(m1).update(hash);
@@ -169,7 +167,7 @@ export const cpkdf = (
     m0.set(xorBytes(c, _36));
     m1.set(xorBytes(c, _5C));
     hasher.update(m0.subarray(0, 32)).update(s).update(m1.subarray(0, 32));
-    if(password.length != 0) hasher.update(pin);
+    if(password.length !== 0) hasher.update(pin);
     hasher.update(hasher.digest());
 
     return hasher.digest();

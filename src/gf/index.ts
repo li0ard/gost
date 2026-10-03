@@ -46,7 +46,7 @@ const gf2m_multiply = (
     const max_bit = 1n << (degree - 1n);
 
     while (y > 0n) {
-        if((y & 1n) == 1n) z ^= x;
+        if((y & 1n) === 1n) z ^= x;
         if((x & max_bit) > 0n) x = ((x ^ max_bit) << 1n) ^ poly;
         else x <<= 1n;
         y >>= 1n;
@@ -65,6 +65,6 @@ export const gf128Multiply = (a: TArg<Uint8Array>, b: TArg<Uint8Array>): TRet<Ui
     a,b
 );
 
-export const gf256Multiply = (a: number, b: number) => (a == 0 || b == 0)
+export const gf256Multiply = (a: number, b: number) => (a === 0 || b === 0)
     ? 0
     : gf_multtable_exp[(gf_multtable_log[a] + gf_multtable_log[b]) % 255];

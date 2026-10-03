@@ -84,7 +84,7 @@ export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
         if(!Fn.isValidNot0(d)) throw new Error("Invalid private key");
 
         const k = rand ? Fn.create(bytesToNumberBE(rand)) : drbg(d, digest, extraEntropy);
-        if(rand && k == 0n) throw new Error("Invalid rand specified");
+        if(rand && k === 0n) throw new Error("Invalid rand specified");
 
         const r = Fn.create(BASE.multiply(k).x),
             s = Fn.add(Fn.mul(r, d), Fn.mul(k, prepareHash(digest)));
@@ -163,7 +163,7 @@ export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
 
     const computeST = (): bigint[] => {
         if(!parameters.e || !parameters.d) throw new Error("No Twisted Edwards parameters");
-        if(parameters.st && parameters.st.length != 0) return parameters.st;
+        if(parameters.st && parameters.st.length !== 0) return parameters.st;
 
         return [
             Fp.div(Fp.sub(parameters.e, parameters.d), 4n), 

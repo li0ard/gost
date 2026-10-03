@@ -17,7 +17,7 @@ const BLOCKSIZE = 8;
 const G = (v: number, sbox: TArg<Uint8Array>): number => {
     const nibble = (r: number, i: number): number => {
         const b = sbox[r + (i >> 1)];
-        return (i & 1) == 0 ? (b >>> 4) : (b & 0x0f);
+        return (i & 1) === 0 ? (b >>> 4) : (b & 0x0f);
     }
 
     const t = (nibble(0, v & 0x0f) << 0) |
