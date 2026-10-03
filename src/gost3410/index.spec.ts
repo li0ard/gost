@@ -1,6 +1,6 @@
 import { hexToBytes, type TArg, type TRet } from "@noble/curves/utils.js";
 import { describe, test, expect } from "bun:test";
-import { gost2001CC, gost2001Test, gost256A, gost256B, gost256C, gost256D, gost512A, gost512B, gost512C, gost512Test } from "./index.js";
+import { CURVES, gost2001CC, gost2001Test, gost256A, gost256B, gost256C, gost256D, gost512A, gost512B, gost512C, gost512Test } from "./index.js";
 import type { ECDSA } from "../types.js";
 
 const performTest = (
@@ -12,16 +12,17 @@ const performTest = (
     expectedSign: TArg<Uint8Array>
 ) => {
     const publicKey = signer.getPublicKey(privKey, false);
-    const signature = signer.sign(privKey, digest, {rand});
+    const signature = signer.sign(privKey, digest, { rand });
     expect(publicKey).toStrictEqual(expectedPk as TRet<Uint8Array>);
     expect(signature).toStrictEqual(expectedSign as TRet<Uint8Array>);
     expect(signer.verify(publicKey, digest, expectedSign)).toBeTrue();
-    // Generate and verify hedged (deterministic + randomness) signature
-    expect(signer.verify(
-        publicKey,
-        digest,
-        signer.sign(privKey, digest, { extraEntropy: true })
-    )).toBeTrue();
+}
+
+const digest2 = hexToBytes("2dfbc1b372d89a1188c09c52e0eec61fce52032ab1022e8e67ece6672b043ee5");
+const performTest2 = (signer: ECDSA) => {
+    const keypair = signer.keygen();
+    const signature = signer.sign(keypair.secretKey, digest2, { extraEntropy: true });
+    expect(signer.verify(keypair.publicKey, digest2, signature)).toBeTrue();
 }
 
 describe("[SIGN] GOST R 34.10-2001", () => {
@@ -107,4 +108,8 @@ describe("[SIGN] GOST R 34.10-2012 512 bit", () => {
         const expectedSign = hexToBytes("0e4d15b0222c49cde4c7e63375f42fd0e9895644357ee2fd43f4743b9a22a76f95e3c9e296674942a56573648085b65117471fdc23c61fe730bafeb1130326210a9deda97067eaf32bc3986368a1a2c5016b0a75c55f2fe64798810e2490232ae40d2643fd6634defb39f353b8572865376196e4ea0ff38065b588577ccb4a4d");
         performTest(gost512C, privKey, digest, rand, expectedPk, expectedSign);
     });
+});
+
+test.skipIf(process.env.SKIP_LONG === "1")("[SIGN] GOST R 34.10-2012 (random keypair)", () => {
+    for(const i of Object.values(CURVES)) performTest2(i);
 });
