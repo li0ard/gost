@@ -1,37 +1,26 @@
 import { abytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import type { BlockMode, Cipher } from "../types.js";
 import { abytesAligned, xorBytes } from "../utils.js";
-import { MESH_MAX_DATA, meshing } from "./_keytransform.js";
 
 /**
  * **EN:** Cipher Feedback (CFB) mode
  * 
  * **RU:** Режим гаммирования с обратной связью по шифртексту
  */
-export const cfb = (cipher: Cipher, iv: TArg<Uint8Array>, mesh?: boolean): BlockMode => {
+export const cfb = (cipher: Cipher, iv: TArg<Uint8Array>): BlockMode => {
     const bs = cipher.blockSize;
     abytesAligned(iv, bs, "iv");
-    if (mesh && iv.length !== bs) throw new Error("Key meshing requires a single-block IV");
 
     return Object.freeze({
         encrypt: (plaintext: TArg<Uint8Array>): TRet<Uint8Array> => {
             abytes(plaintext, undefined, "plaintext");
-            let activeCipher = cipher;
-            let encrypter = activeCipher.encrypt.bind(activeCipher);
-
             const r: Uint8Array[] = [];
             for (let i = 0; i < iv.length; i += bs) r.push(iv.subarray(i, i + bs));
 
             const out = new Uint8Array(plaintext.length);
             for (let n = 0; n < Math.ceil(plaintext.length / bs); n++) {
                 const i = n * bs;
-                if (mesh && i >= MESH_MAX_DATA && i % MESH_MAX_DATA === 0) {
-                    const meshed = meshing(activeCipher, r[r.length - 1]);
-                    activeCipher = meshed.cipher;
-                    encrypter = activeCipher.encrypt.bind(activeCipher);
-                    r[r.length - 1] = meshed.iv;
-                }
-                const ct = xorBytes(plaintext.subarray(i, i + bs), encrypter(r[0]));
+                const ct = xorBytes(plaintext.subarray(i, i + bs), cipher.encrypt(r[0]));
                 out.set(ct, i);
                 r.shift();
                 r.push(ct);
@@ -41,25 +30,16 @@ export const cfb = (cipher: Cipher, iv: TArg<Uint8Array>, mesh?: boolean): Block
         },
         decrypt: (ciphertext: TArg<Uint8Array>): TRet<Uint8Array> => {
             abytes(ciphertext, undefined, "ciphertext");
-            let activeCipher = cipher;
-            let encrypter = activeCipher.encrypt.bind(activeCipher);
-            
             const r: Uint8Array[] = [];
             for (let i = 0; i < iv.length; i += bs) r.push(iv.subarray(i, i + bs));
 
             const out = new Uint8Array(ciphertext.length);
             for (let n = 0; n < Math.ceil(ciphertext.length / bs); n++) {
                 const i = n * bs;
-                if (mesh && i >= MESH_MAX_DATA && i % MESH_MAX_DATA === 0) {
-                    const meshed = meshing(activeCipher, r[r.length - 1]);
-                    activeCipher = meshed.cipher;
-                    encrypter = activeCipher.encrypt.bind(activeCipher);
-                    r[r.length - 1] = meshed.iv;
-                }
-                const blk = ciphertext.subarray(i, i + bs);
-                out.set(xorBytes(blk, encrypter(r[0])), i);
+                const ct = ciphertext.subarray(i, i + bs);
+                out.set(xorBytes(ct, cipher.encrypt(r[0])), i);
                 r.shift();
-                r.push(blk);
+                r.push(ct);
             }
 
             return out;
