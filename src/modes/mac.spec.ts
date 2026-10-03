@@ -1,6 +1,6 @@
 import { hexToBytes } from "@noble/hashes/utils.js";
 import { describe, test, expect } from "bun:test";
-import { Magma, magmaSboxes } from "../magma";
+import { MagmaLegacy } from "../magma";
 import { mac, mac_legacy, omac_acpkm } from "./mac";
 import { _kuznyechik, _magma, _magma_acpkm, PT_KUZNYECHIK, PT_MAGMA } from "./_test_utils.test";
 
@@ -24,7 +24,7 @@ describe("[MAC] Magma", () => {
 
 describe("[MAG LEGACY] Magma", () => {
     const key = hexToBytes("54686973206973206d657373616765ff206c656e677468003332206279746573");
-    const cipher = new Magma(key, magmaSboxes.ID_GOST_28147_89_CRYPTO_PRO_A_PARAM_SET, true);
+    const cipher = new MagmaLegacy(key);
     
     const pt = new TextEncoder().encode("abc");
     test("#1", () => {

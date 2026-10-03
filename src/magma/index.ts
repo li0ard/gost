@@ -8,7 +8,7 @@
  * @module
  */
 import { bytesToNumberBE, bytesToNumberLE, concatBytes, numberToBytesBE, numberToBytesLE, type TArg, type TRet } from "@noble/curves/utils.js";
-import { ID_TC26_GOST_28147_PARAM_Z, magmaKeySequences } from "./const.js";
+import { ID_GOST_28147_89_CRYPTO_PRO_A_PARAM_SET, ID_TC26_GOST_28147_PARAM_Z, magmaKeySequences } from "./const.js";
 import type { Cipher } from "../types.js";
 import { abool, abytes, createView } from "@noble/hashes/utils.js";
 
@@ -89,6 +89,17 @@ export class Magma implements Cipher {
 
     decrypt(ciphertext: TArg<Uint8Array>): TRet<Uint8Array> {
         return this.proceedBlock(ciphertext, magmaKeySequences.DECRYPT);
+    }
+}
+
+/** Shortcut for Magma (legacy variation) cipher */
+export class MagmaLegacy extends Magma {
+    /** Shortcut for Magma (legacy variation) cipher */
+    constructor(
+        key: TArg<Uint8Array>,
+        sbox: TArg<Uint8Array> = ID_GOST_28147_89_CRYPTO_PRO_A_PARAM_SET
+    ) {
+        super(key, sbox, true);
     }
 }
 

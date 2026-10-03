@@ -1,6 +1,6 @@
 import { hexToBytes } from "@noble/hashes/utils.js";
 import { describe, test, expect } from "bun:test";
-import { Magma, magmaSboxes } from "../magma";
+import { MagmaLegacy, magmaSboxes } from "../magma";
 import { cfb } from "./cfb";
 import { _kuznyechik, _magma, IV_KUZNYECHIK, IV_MAGMA, PT_KUZNYECHIK, PT_MAGMA } from "./_test_utils.test";
 
@@ -30,7 +30,7 @@ describe("[CFB] Magma", () => {
         const iv = hexToBytes("0102030405060708");
         const pt = hexToBytes("112233445566778899AABBCCDD800000");
         const ct = hexToBytes("6EE84586DD2BCA0CAD3616940E164242");
-        const cipher = new Magma(key, magmaSboxes.ID_GOSTR_3411_94_TEST_PARAM_SET, true);
+        const cipher = new MagmaLegacy(key, magmaSboxes.ID_GOSTR_3411_94_TEST_PARAM_SET);
         const mode = cfb(cipher, iv);
 
         expect(mode.encrypt(pt)).toStrictEqual(ct);

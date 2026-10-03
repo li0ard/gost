@@ -1,6 +1,5 @@
 import { type TArg, type TRet, bytesToNumberLE, concatBytes, copyBytes, numberToBytesLE } from "@noble/curves/utils.js";
-import { Magma } from "../magma/index.js";
-import { ID_GOST_28147_89_CRYPTO_PRO_A_PARAM_SET } from "../magma/const.js";
+import { MagmaLegacy } from "../magma/index.js";
 import { cfb } from "./cfb.js";
 import type { Cipher, CipherOrHashFunctionWrapper } from "../types.js";
 import { ctr } from "./ctr.js";
@@ -8,7 +7,7 @@ import { ctr } from "./ctr.js";
 export const cp_kek_diversify = (
     kek: TArg<Uint8Array>,
     ukm: TArg<Uint8Array>,
-    sbox: TArg<Uint8Array> = ID_GOST_28147_89_CRYPTO_PRO_A_PARAM_SET
+    sbox?: TArg<Uint8Array>
 ): TRet<Uint8Array> => {
     let out = copyBytes(kek);
     for (let i = 0; i < 8; i++) {
@@ -20,7 +19,7 @@ export const cp_kek_diversify = (
         }
 
         const iv = concatBytes(numberToBytesLE(s1 >>> 0, 4), numberToBytesLE(s2 >>> 0, 4));
-        out = cfb(new Magma(out, sbox, true), iv).encrypt(out);
+        out = cfb(new MagmaLegacy(out, sbox), iv).encrypt(out);
     }
 
     return out;
