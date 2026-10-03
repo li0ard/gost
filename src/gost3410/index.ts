@@ -11,12 +11,12 @@
  * - Reverse digest
  * - Reverse/swap public key
  * 
- * Unfortunately, GOST doesn't unify serialization, this realization serialize as in standard
+ * Unfortunately, GOST doesn't unify serialization, this realization serialize as in standard (Big-Endian)
  * 
  * API is close to `@noble/curves`
  * @module
  */
-import { bytesToNumberBE, concatBytes, numberToBytesBE, type TArg, type TRet, numberToBytesLE, type CHash, randomBytes, abytes } from "@noble/curves/utils.js";
+import { bytesToNumberBE, concatBytes, type TArg, type TRet, randomBytes, abytes } from "@noble/curves/utils.js";
 import {
     type GostCurveParameters,
     ID_GOSTR3410_2001_PARAM_SET_CC, ID_GOSTR3410_2001_TEST_PARAM_SET,
@@ -30,7 +30,7 @@ import { weierstrass } from "@noble/curves/abstract/weierstrass.js";
 import { createKeygen, type AffinePoint } from "@noble/curves/abstract/curve.js";
 import type { ECDSA, SignOpts } from "../types.js";
 import { createStreebogHmacDrbg } from "./drbg.js";
-import { ahash } from "@noble/hashes/utils.js";
+import { ahash, type CHash, type Hash } from "@noble/hashes/utils.js";
 
 /** Swap `x` and `y` in point bytes */
 const swapPoint = (point: TArg<Uint8Array>): TRet<Uint8Array> => concatBytes(
@@ -40,8 +40,7 @@ const swapPoint = (point: TArg<Uint8Array>): TRet<Uint8Array> => concatBytes(
 
 /** Creates GOST R 34.10-2012 (2001) signing interface */
 export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
-    const Point = weierstrass(parameters);
-    const { Fp, Fn, BASE } = Point;
+    const Point = weierstrass(parameters), { Fp, Fn, BASE } = Point;
     const lengths = Object.freeze({
         secretKey: Fn.BYTES,
         publicKey: 1 + Fp.BYTES,
@@ -52,7 +51,7 @@ export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
     });
     const drbg = createStreebogHmacDrbg(Point.Fn);
 
-    const prepareHash = (digest: TArg<Uint8Array>): bigint => 
+    const prepareHash = (digest: TArg<Uint8Array>): bigint =>
         Fn.create(bytesToNumberBE(digest)) || 1n;
 
     /**
@@ -78,8 +77,8 @@ export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
      * ```
      */
     const sign = (secretKey: TArg<Uint8Array>, digest: TArg<Uint8Array>, opts?: SignOpts) => {
-        abytes(secretKey);
-        abytes(digest);
+        abytes(secretKey, undefined, "secretKey");
+        abytes(digest, undefined, "digest");
         const { rand, extraEntropy } = opts ?? {};
         const d = Fn.fromBytes(secretKey);
         if(!Fn.isValidNot0(d)) throw new Error("Invalid private key");
@@ -90,10 +89,7 @@ export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
         const r = Fn.create(BASE.multiply(k).x),
             s = Fn.add(Fn.mul(r, d), Fn.mul(k, prepareHash(digest)));
 
-        return concatBytes(
-            numberToBytesBE(r, parameters.length),
-            numberToBytesBE(s, parameters.length)
-        );
+        return concatBytes(Fn.toBytes(r), Fn.toBytes(s));
     }
 
     /**
@@ -114,11 +110,11 @@ export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
         digest: TArg<Uint8Array>,
         signature: TArg<Uint8Array>
     ) => {
-        abytes(publicKey);
-        abytes(digest);
+        abytes(publicKey, undefined, "publicKey");
+        abytes(digest, undefined, "digest");
         abytes(signature, lengths.signature, "signature");
-        const r = bytesToNumberBE(signature.subarray(0, parameters.length)),
-            s = bytesToNumberBE(signature.subarray(parameters.length));
+        const r = Fn.fromBytes(signature.subarray(0, Fn.BYTES)),
+            s = Fn.fromBytes(signature.subarray(Fn.BYTES));
         if(!Fn.isValidNot0(r) || !Fn.isValidNot0(s)) return false;
 
         const v = Fn.inv(prepareHash(digest));
@@ -138,23 +134,23 @@ export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
      * @param ukm User keying material (aka salt, VKO-factor)
      */
     const getSharedSecret = (
-        hash: CHash,
+        hash: CHash<Hash<any>>,
         secretKeyA: TArg<Uint8Array>,
         publicKeyB: TArg<Uint8Array>,
         ukm: TArg<Uint8Array>
     ): TRet<Uint8Array> => {
         ahash(hash);
-        abytes(secretKeyA);
-        abytes(publicKeyB);
-        abytes(ukm);
+        abytes(secretKeyA, undefined, "secretKeyA");
+        abytes(publicKeyB, undefined, "publicKeyB");
+        abytes(ukm, undefined, "ukm");
         const key = Point.fromBytes(publicKeyB)
         .multiply(Fn.fromBytes(secretKeyA))
         .multiply(Fn.mul(parameters.h, bytesToNumberBE(ukm)));
 
-        return hash(concatBytes(
-            numberToBytesLE(key.x, parameters.length),
-            numberToBytesLE(key.y, parameters.length)
-        ));
+        const kx = Fp.toBytes(key.x).reverse(),
+            ky = Fp.toBytes(key.y).reverse();
+
+        return hash.create().update(kx).update(ky).digest();
     }
 
     const keygen = createKeygen(

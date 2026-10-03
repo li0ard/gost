@@ -2,8 +2,6 @@ import type { WeierstrassOpts } from "@noble/curves/abstract/weierstrass.js";
 
 /** Parameters for GOST curves */
 export interface GostCurveParameters extends WeierstrassOpts<bigint> {
-    /** Curve point length */
-    length: number
     /** Param `e` (`a`) for representation as Twisted Edwards */
     e?: bigint;
     /** Param `d` for representation as Twisted Edwards */
@@ -23,7 +21,6 @@ export const ID_GOSTR3410_2001_PARAM_SET_CC: Readonly<GostCurveParameters> = {
     Gx: 2n,
     Gy: 0xa20e034bf8813ef5c18d01105e726a17eb248b264ae9706f440bedc8ccb6b22cn,
     h: 1n,
-    length: 32,
     oids: ["1.2.643.2.9.1.8.1"]
 };
 
@@ -36,7 +33,6 @@ export const ID_GOSTR3410_2001_TEST_PARAM_SET: Readonly<GostCurveParameters> = {
     Gx: 2n,
     Gy: 0x08E2A8A0E65147D4BD6316030E16D19C85C97F0A9CA267122B96ABBCEA7E8FC8n,
     h: 1n,
-    length: 32,
     oids: ["1.2.643.2.2.35.0"]
 }
 
@@ -51,7 +47,6 @@ export const ID_GOSTR3410_2012_256_PARAM_SET_A: Readonly<GostCurveParameters> = 
     h: 4n,
     e: 1n,
     d: 0x0605F6B7C183FA81578BC39CFAD518132B9DF62897009AF7E522C32D6DC7BFFBn,
-    length: 32,
     st: [0x7e7e82520f9f015faa1d0f18c14ab9fb35188275da3fd94206b74f34a48e0ecdn, 0x0100fe73f595ff158e974b44d478d9588744fe5c192ac47ea63075dce7a14aaan],
     oids: ["1.2.643.7.1.2.1.1.1"]
 }
@@ -65,7 +60,6 @@ export const ID_GOSTR3410_2012_256_PARAM_SET_B: Readonly<GostCurveParameters> = 
     Gx: 1n,
     Gy: 0x8D91E471E0989CDA27DF505A453F2B7635294F2DDF23E3B122ACC99C9E9F1E14n,
     h: 1n,
-    length: 32,
     oids: ["1.2.643.7.1.2.1.1.2", "1.2.643.2.2.35.1", "1.2.643.2.2.36.0"]
 }
 
@@ -78,7 +72,6 @@ export const ID_GOSTR3410_2012_256_PARAM_SET_C: Readonly<GostCurveParameters> = 
     Gx: 1n,
     Gy: 0x3FA8124359F96680B83D1C3EB2C070E5C545C9858D03ECFB744BF8D717717EFCn,
     h: 1n,
-    length: 32,
     oids: ["1.2.643.7.1.2.1.1.3", "1.2.643.2.2.35.2"]
 }
 
@@ -91,7 +84,6 @@ export const ID_GOSTR3410_2012_256_PARAM_SET_D: Readonly<GostCurveParameters> = 
     Gx: 0n,
     Gy: 0x41ECE55743711A8C3CBF3783CD08C0EE4D4DC440D4641A8F366E550DFDB3BB67n,
     h: 1n,
-    length: 32,
     oids: ["1.2.643.7.1.2.1.1.4", "1.2.643.2.2.35.3", "1.2.643.2.2.36.1"]
 }
 
@@ -104,7 +96,6 @@ export const ID_GOSTR3410_2012_512_TEST_PARAM_SET: Readonly<GostCurveParameters>
     Gx: 0x24D19CC64572EE30F396BF6EBBFD7A6C5213B3B3D7057CC825F91093A68CD762FD60611262CD838DC6B60AA7EEE804E28BC849977FAC33B4B530F1B120248A9An,
     Gy: 0x2BB312A43BD2CE6E0D020613C857ACDDCFBF061E91E5F2C3F32447C259F39B2C83AB156D77F1496BF7EB3351E1EE4E43DC1A18B91B24640B6DBB92CB1ADD371En,
     h: 1n,
-    length: 64,
     oids: ["1.2.643.7.1.2.1.2.0"]
 }
 
@@ -117,7 +108,6 @@ export const ID_GOSTR3410_2012_512_PARAM_SET_A: Readonly<GostCurveParameters> = 
     Gx: 3n,
     Gy: 0x7503CFE87A836AE3A61B8816E25450E6CE5E1C93ACF1ABC1778064FDCBEFA921DF1626BE4FD036E93D75E6A50E3A41E98028FE5FC235F5B889A589CB5215F2A4n,
     h: 1n,
-    length: 64,
     oids: ["1.2.643.7.1.2.1.2.1"]
 }
 
@@ -130,7 +120,6 @@ export const ID_GOSTR3410_2012_512_PARAM_SET_B: Readonly<GostCurveParameters> = 
     Gx: 2n,
     Gy: 0x1A8F7EDA389B094C2C071E3647A8940F3C123B697578C213BE6DD9E6C8EC7335DCB228FD1EDF4A39152CBCAAF8C0398828041055F94CEEEC7E21340780FE41BDn,
     h: 1n,
-    length: 64,
     oids: ["1.2.643.7.1.2.1.2.2"]
 }
 
@@ -145,7 +134,6 @@ export const ID_GOSTR3410_2012_512_PARAM_SET_C: Readonly<GostCurveParameters> = 
     h: 4n,
     e: 1n,
     d: 0x9E4F5D8C017D8D9F13A5CF3CDF5BFE4DAB402D54198E31EBDE28A0621050439CA6B39E0A515C06B304E2CE43E79E369E91A0CFC2BC2A22B4CA302DBB33EE7550n,
-    length: 64,
     st: [0x186c289cffa09c983b168c30c829006c952ff4aaf99c73850875d7e77bebef18d653187d6ba8fe533ec74c6f061872585b97cc0f50f57752cd73f4913304621en, 0x9a628f975594ecefd89ba28a2539ffb79c8ab238aeed0851fa5c1abb02b80b44c6734501b83a011dd625cd0b5145091a6d9acd4b1f5c5b1e21b2b249ddfd1271n],
     oids: ["1.2.643.7.1.2.1.2.3"]
 }
