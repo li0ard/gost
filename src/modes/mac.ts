@@ -71,7 +71,6 @@ export const mac_legacy = (
     iv: TArg<Uint8Array> = new Uint8Array(cipher.blockSize)
 ): MACMode => {
     abytes(iv, undefined, "iv");
-
     return Object.freeze({
         compute: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
             abytes(msg, undefined, "msg");

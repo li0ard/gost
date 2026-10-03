@@ -26,7 +26,7 @@ export const ctr = (
         acpkmSectionSize = _isAcpkmOmac
         ? (cipher.blockSize == 16 ? 6 : 10)
         : 2,
-    CipherCtor = cipher.constructor as CipherCtor;
+        CipherCtor = cipher.constructor as CipherCtor;
 
     return Object.freeze({
         crypt: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {

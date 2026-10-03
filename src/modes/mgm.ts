@@ -1,4 +1,4 @@
-import { abytes, concatBytes, copyBytes, type TArg, type TRet, bytesToNumberBE, equalBytes, numberToBytesBE } from "@noble/curves/utils.js";
+import { abytes, concatBytes, copyBytes, type TArg, type TRet, bytesToNumberBE, equalBytes, numberToBytesBE, anumber } from "@noble/curves/utils.js";
 import type { AEADMode, Cipher } from "../types.js";
 import { pad1, xorBytes, xorBytesInPlace } from "../utils.js";
 import { gf64Multiply, gf128Multiply } from "../gf/index.js"; 
@@ -12,9 +12,10 @@ export const mgm = (cipher: Cipher, nonce: TArg<Uint8Array>, tagSize = cipher.bl
     const bs = cipher.blockSize;
     if (bs !== 8 && bs !== 16)
         throw new Error("Only 64/128-bit blocksizes allowed");
+    abytes(nonce, bs, "nonce");
+    anumber(tagSize, "tagSize");
     if (tagSize < 4 || tagSize > bs)
         throw new Error("Invalid tagSize");
-    abytes(nonce, bs, "nonce");
     if ((nonce[0] & 0x80) !== 0)
         throw new Error("Nonce must not have its high bit set");
 
