@@ -98,9 +98,6 @@ abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
     protected n: Uint8Array;
     protected sigma: Uint8Array;
 
-    abstract _cloneInto(to?: T): T;
-    abstract clone(): T;
-
     /** Streebog (GOST R 34.11-2012) hash function */
     constructor(private is512: boolean) {
         abool(is512);
@@ -124,6 +121,9 @@ abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
         to.sigma.set(this.sigma);
         return to;
     }
+
+    abstract _cloneInto(to?: Streebog<T>): Streebog<T>;
+    clone(): Streebog<T> { return this._cloneInto(); }
 
     private processBlock(block: TArg<Uint8Array>) {
         const rev = copyBytes(block).reverse();
@@ -188,7 +188,6 @@ export class _Streebog256 extends Streebog<_Streebog256> {
     /** Create hash instance */
     static create(): _Streebog256 { return new _Streebog256(); }
 
-    clone(): _Streebog256 { return this._cloneInto(); }
     _cloneInto(to?: _Streebog256): _Streebog256 {
         return this._copyState(to ||= new _Streebog256());
     }
@@ -202,7 +201,6 @@ export class _Streebog512 extends Streebog<_Streebog512> {
     /** Create hash instance */
     static create(): _Streebog512 { return new _Streebog512(); }
 
-    clone(): _Streebog512 { return this._cloneInto(); }
     _cloneInto(to?: _Streebog512): _Streebog512 {
         return this._copyState(to ||= new _Streebog512());
     }
