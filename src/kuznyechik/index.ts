@@ -8,11 +8,8 @@ import { xorBytesInPlace } from "../utils.js";
 import type { Cipher } from "../types.js";
 import { gf256Multiply } from "../gf/index.js";
 
-const S = (input: TArg<Uint8Array>, pi: TArg<Uint8Array> = PI) => {
-    for (let i = 0; i < 16; i++) input[i] = pi[input[i]];
-}
-
-const L = (input: TArg<Uint8Array>) => {
+const SL = (input: TArg<Uint8Array>) => {
+    for (let i = 0; i < 16; i++) input[i] = PI[input[i]];
     let p = 0;
     for (let n = 0; n < 16; n++) {
         let c = 0;
@@ -23,7 +20,7 @@ const L = (input: TArg<Uint8Array>) => {
     }
 }
 
-const Lr = (input: TArg<Uint8Array>) => {
+const LS = (input: TArg<Uint8Array>) => {
     let p = 0;
     for (let n = 0; n < 16; n++) {
         let c = 0;
@@ -32,11 +29,7 @@ const Lr = (input: TArg<Uint8Array>) => {
         input[p] = c;
         p = (p + 1) & 15;
     }
-}
-
-const SL = (input: TArg<Uint8Array>) => {
-    S(input);
-    L(input);
+    for (let i = 0; i < 16; i++) input[i] = PI_REV[input[i]];
 }
 
 /** Kuznyechik (GOST R 34.12-2015) cipher */
@@ -52,7 +45,6 @@ export class Kuznyechik implements Cipher {
      */
     constructor(key: TArg<Uint8Array>) {
         abytes(key, this.keySize, "key");
-
         const roundKeys = Array<Uint8Array>(10);
         roundKeys[0] = key.slice(0, 16);
         roundKeys[1] = key.slice(16);
@@ -91,8 +83,7 @@ export class Kuznyechik implements Cipher {
         const s = copyBytes(ciphertext);
         xorBytesInPlace(s, this.roundKeys[9]);
         for (let r = 8; r >= 0; r--) {
-            Lr(s);
-            S(s, PI_REV);
+            LS(s);
             xorBytesInPlace(s, this.roundKeys[r]);
         }
         return s;
