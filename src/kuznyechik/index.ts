@@ -3,68 +3,41 @@
  * @module
  */
 import { abytes, copyBytes, type TArg, type TRet } from "@noble/hashes/utils.js";
-import { ITER, L, PI, PI_REV } from "./const.js";
-import { xorBytes } from "../utils.js";
+import { ITER, L as L_, PI, PI_REV } from "./const.js";
+import { xorBytesInPlace } from "../utils.js";
 import type { Cipher } from "../types.js";
 import { gf256Multiply } from "../gf/index.js";
 
-const S = (input: TArg<Uint8Array>, pi = PI): TRet<Uint8Array> => new Uint8Array([
-    pi[input[0]], pi[input[1]], pi[input[2]], pi[input[3]],
-    pi[input[4]], pi[input[5]], pi[input[6]], pi[input[7]],
-    pi[input[8]], pi[input[9]], pi[input[10]], pi[input[11]],
-    pi[input[12]], pi[input[13]], pi[input[14]], pi[input[15]]
-]);
+const S = (input: TArg<Uint8Array>, pi: TArg<Uint8Array> = PI) => {
+    for (let i = 0; i < 16; i++) input[i] = pi[input[i]];
+}
 
-const R = (input: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
-    gf256Multiply(input[15], L[0]) ^ gf256Multiply(input[0], L[1]) ^
-    gf256Multiply(input[1], L[2]) ^ gf256Multiply(input[2], L[3]) ^
-    gf256Multiply(input[3], L[4]) ^ gf256Multiply(input[4], L[5]) ^
-    gf256Multiply(input[5], L[6]) ^ gf256Multiply(input[6], L[7]) ^
-    gf256Multiply(input[7], L[8]) ^ gf256Multiply(input[8], L[9]) ^
-    gf256Multiply(input[9], L[10]) ^ gf256Multiply(input[10], L[11]) ^
-    gf256Multiply(input[11], L[12]) ^ gf256Multiply(input[12], L[13]) ^
-    gf256Multiply(input[13], L[14]) ^ gf256Multiply(input[14], L[15]),
-    ...input.subarray(0, 15)
-]);
+const L = (input: TArg<Uint8Array>) => {
+    let p = 0;
+    for (let n = 0; n < 16; n++) {
+        let c = 0;
+        for (let k = 0; k < 16; k++)
+            c ^= gf256Multiply(input[(p + k) & 15], L_[(k + 1) & 15]);
+        p = (p + 15) & 15;
+        input[p] = c;
+    }
+}
 
-const Rr = (input: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
-    ...input.subarray(1, 16),
-    gf256Multiply(input[0], L[0]) ^ gf256Multiply(input[1], L[1]) ^
-    gf256Multiply(input[2], L[2]) ^ gf256Multiply(input[3], L[3]) ^
-    gf256Multiply(input[4], L[4]) ^ gf256Multiply(input[5], L[5]) ^
-    gf256Multiply(input[6], L[6]) ^ gf256Multiply(input[7], L[7]) ^
-    gf256Multiply(input[8], L[8]) ^ gf256Multiply(input[9], L[9]) ^
-    gf256Multiply(input[10], L[10]) ^ gf256Multiply(input[11], L[11]) ^
-    gf256Multiply(input[12], L[12]) ^ gf256Multiply(input[13], L[13]) ^
-    gf256Multiply(input[14], L[14]) ^ gf256Multiply(input[15], L[15])
-]);
+const Lr = (input: TArg<Uint8Array>) => {
+    let p = 0;
+    for (let n = 0; n < 16; n++) {
+        let c = 0;
+        for (let k = 0; k < 16; k++)
+            c ^= gf256Multiply(input[(p + k) & 15], L_[k]);
+        input[p] = c;
+        p = (p + 1) & 15;
+    }
+}
 
-// Call `R` 16x times
-const LL = (input: TArg<Uint8Array>): TRet<Uint8Array> => R(R(R(R(
-    R(R(R(R(
-        R(R(R(R(
-            R(R(R(R(input))))
-        ))))
-    ))))
-))));
-
-// Call `Rr` 16x times
-const LLr = (input: TArg<Uint8Array>): TRet<Uint8Array> => Rr(Rr(Rr(Rr(
-    Rr(Rr(Rr(Rr(
-        Rr(Rr(Rr(Rr(
-            Rr(Rr(Rr(Rr(input))))
-        ))))
-    ))))
-))));
-
-const LLS = (block: TArg<Uint8Array>): TRet<Uint8Array> => LL(S(block));
-const SLLr = (block: TArg<Uint8Array>): TRet<Uint8Array> => S(LLr(block), PI_REV);
-
-const F = (
-    inKey: TArg<Uint8Array>,
-    inKey2: TArg<Uint8Array>,
-    iter: TArg<Uint8Array>
-): TRet<Uint8Array> => xorBytes(LLS(xorBytes(inKey, iter)), inKey2);
+const SL = (input: TArg<Uint8Array>) => {
+    S(input);
+    L(input);
+}
 
 /** Kuznyechik (GOST R 34.12-2015) cipher */
 export class Kuznyechik implements Cipher {
@@ -81,73 +54,47 @@ export class Kuznyechik implements Cipher {
         abytes(key, this.keySize, "key");
 
         const roundKeys = Array<Uint8Array>(10);
-        roundKeys[0] = key.slice(0, this.blockSize);
-        roundKeys[1] = key.slice(this.blockSize);
+        roundKeys[0] = key.slice(0, 16);
+        roundKeys[1] = key.slice(16);
 
-        const temp1 = copyBytes(roundKeys[0]),
-            temp2 = copyBytes(roundKeys[1]),
-            temp3 = new Uint8Array(this.blockSize),
-            temp4 = new Uint8Array(this.blockSize);
+        let a = copyBytes(roundKeys[0]),
+            b = copyBytes(roundKeys[1]),
+            t = new Uint8Array(16);
         for (let i = 0; i < 4; i++) {
-            const baseIndex = i * 128;
-
-            temp3.set(F(temp1, temp2, ITER.subarray(baseIndex, baseIndex + 16)));
-            temp4.set(temp1);
-
-            temp1.set(F(temp3, temp4, ITER.subarray(baseIndex + 16, baseIndex + 32)));
-            temp2.set(temp3);
-            temp3.set(F(temp1, temp2, ITER.subarray(baseIndex + 32, baseIndex + 48)));
-            temp4.set(temp1);
-
-            temp1.set(F(temp3, temp4, ITER.subarray(baseIndex + 48, baseIndex + 64)));
-            temp2.set(temp3);
-            temp3.set(F(temp1, temp2, ITER.subarray(baseIndex + 64, baseIndex + 80)));
-            temp4.set(temp1);
-
-            temp1.set(F(temp3, temp4, ITER.subarray(baseIndex + 80, baseIndex + 96)));
-            temp2.set(temp3);
-            temp3.set(F(temp1, temp2, ITER.subarray(baseIndex + 96, baseIndex + 112)));
-            temp4.set(temp1);
-
-            temp1.set(F(temp3, temp4, ITER.subarray(baseIndex + 112, baseIndex + 128)));
-            temp2.set(temp3);
-
-            roundKeys[2 + 2 * i] = copyBytes(temp1);
-            roundKeys[3 + 2 * i] = copyBytes(temp2);
+            for (let j = 0; j < 8; j++) {
+                const o = (i * 8 + j) * 16;
+                t.set(a);
+                xorBytesInPlace(t, ITER, o);
+                SL(t);
+                xorBytesInPlace(t, b);
+                const old = b; b = a; a = t; t = old;
+            }
+            roundKeys[2 + 2 * i] = copyBytes(a);
+            roundKeys[3 + 2 * i] = copyBytes(b);
         }
-
         this.roundKeys = roundKeys;
     }
 
     encrypt(plaintext: TArg<Uint8Array>): TRet<Uint8Array> {
         abytes(plaintext, this.blockSize, "plaintext");
-
-        const currentBlock = LLS(xorBytes(this.roundKeys[0], plaintext));
-        currentBlock.set(LLS(xorBytes(this.roundKeys[1], currentBlock)));
-        currentBlock.set(LLS(xorBytes(this.roundKeys[2], currentBlock)));
-        currentBlock.set(LLS(xorBytes(this.roundKeys[3], currentBlock)));
-        currentBlock.set(LLS(xorBytes(this.roundKeys[4], currentBlock)));
-        currentBlock.set(LLS(xorBytes(this.roundKeys[5], currentBlock)));
-        currentBlock.set(LLS(xorBytes(this.roundKeys[6], currentBlock)));
-        currentBlock.set(LLS(xorBytes(this.roundKeys[7], currentBlock)));
-        currentBlock.set(LLS(xorBytes(this.roundKeys[8], currentBlock)));
-
-        return xorBytes(this.roundKeys[9], currentBlock);
+        const s = copyBytes(plaintext);
+        for (let r = 0; r < 9; r++) {
+            xorBytesInPlace(s, this.roundKeys[r]);
+            SL(s);
+        }
+        xorBytesInPlace(s, this.roundKeys[9]);
+        return s;
     }
 
     decrypt(ciphertext: TArg<Uint8Array>): TRet<Uint8Array> {
         abytes(ciphertext, this.blockSize, "ciphertext");
-
-        const currentBlock = xorBytes(this.roundKeys[9], ciphertext);
-        currentBlock.set(xorBytes(this.roundKeys[8], SLLr(currentBlock)));
-        currentBlock.set(xorBytes(this.roundKeys[7], SLLr(currentBlock)));
-        currentBlock.set(xorBytes(this.roundKeys[6], SLLr(currentBlock)));
-        currentBlock.set(xorBytes(this.roundKeys[5], SLLr(currentBlock)));
-        currentBlock.set(xorBytes(this.roundKeys[4], SLLr(currentBlock)));
-        currentBlock.set(xorBytes(this.roundKeys[3], SLLr(currentBlock)));
-        currentBlock.set(xorBytes(this.roundKeys[2], SLLr(currentBlock)));
-        currentBlock.set(xorBytes(this.roundKeys[1], SLLr(currentBlock)));
-
-        return xorBytes(this.roundKeys[0], SLLr(currentBlock));
+        const s = copyBytes(ciphertext);
+        xorBytesInPlace(s, this.roundKeys[9]);
+        for (let r = 8; r >= 0; r--) {
+            Lr(s);
+            S(s, PI_REV);
+            xorBytesInPlace(s, this.roundKeys[r]);
+        }
+        return s;
     }
 }
