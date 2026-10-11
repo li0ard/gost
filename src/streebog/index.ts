@@ -8,7 +8,6 @@ import { PI } from "../kuznyechik/const.js";
 import { xorBytes } from "../utils.js";
 import { numberToBytesBE } from "@noble/curves/utils.js";
 
-const BLOCKSIZE = 64;
 const _512 = new Uint8Array([0, 0, 2, 0]);
 
 const add512Into = (dst: TArg<Uint8Array>, src: TArg<Uint8Array>): void => {
@@ -36,7 +35,7 @@ const SP = (input: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
 ]);
 
 const L = (input: TArg<Uint8Array>): TRet<Uint8Array> => {
-    const result = new Uint8Array(BLOCKSIZE), view = createView(result);
+    const result = new Uint8Array(64), view = createView(result);
     for (let i = 0; i < 8; i++) {
         const parts = new Uint32Array(2);
         const tmp = input.slice(i * 8, i * 8 + 8).reverse();
@@ -89,10 +88,10 @@ const G2 = (
 
 /** Streebog (GOST R 34.11-2012) hash function */
 abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
-    readonly blockLen = BLOCKSIZE;
+    readonly blockLen = 64;
     readonly outputLen: number;
     readonly canXOF = false;
-    protected buffer = new Uint8Array(BLOCKSIZE);
+    protected buffer = new Uint8Array(this.blockLen);
     protected pos = 0;
     protected hash: Uint8Array;
     protected n: Uint8Array;

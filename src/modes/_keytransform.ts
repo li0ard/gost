@@ -9,7 +9,7 @@ export const cp_kek_diversify = (
     ukm: TArg<Uint8Array>,
     sbox?: TArg<Uint8Array>
 ): TRet<Uint8Array> => {
-    let out = copyBytes(kek);
+    const out = copyBytes(kek);
     for (let i = 0; i < 8; i++) {
         let s1 = 0, s2 = 0;
         for (let j = 0; j < 8; j++) {
@@ -19,7 +19,7 @@ export const cp_kek_diversify = (
         }
 
         const iv = concatBytes(numberToBytesLE(s1 >>> 0, 4), numberToBytesLE(s2 >>> 0, 4));
-        out = cfb(new MagmaLegacy(out, sbox), iv).encrypt(out);
+        out.set(cfb(new MagmaLegacy(out, sbox), iv).encrypt(out));
     }
 
     return out;
@@ -33,10 +33,10 @@ const ACPKM_D = new Uint8Array([
 ]);
 
 export const acpkm = (encrypter: CipherOrHashFunctionWrapper, bs: number): TRet<Uint8Array> => {
-    const result: Uint8Array[] = [];
-    for (let i = 0; i < 32; i += bs) result.push(encrypter(ACPKM_D.subarray(i, i + bs)));
+    const out = new Uint8Array(32);
+    for (let i = 0; i < 32; i += bs) out.set(encrypter(ACPKM_D.subarray(i, i + bs)), i);
 
-    return concatBytes(...result);
+    return out;
 }
 
 export const acpkm_master = (cipher: Cipher, length: number): TRet<Uint8Array> => ctr(

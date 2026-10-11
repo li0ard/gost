@@ -140,8 +140,7 @@ export const cpkdf = (
     password: TArg<KDFInput>,
     salt: TArg<KDFInput>
 ): TRet<Uint8Array> => {
-    const hasher = streebog256.create();
-    const bs = streebog256.blockLen;
+    const hasher = streebog256.create(), bs = streebog256.blockLen;
     const p = kdfInputToBytes(password), s = kdfInputToBytes(salt);
     if(password.length > 256)
         throw new Error("Password cannot be longer than 256 symbols");
