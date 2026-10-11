@@ -34,13 +34,13 @@
     "docs": "typedoc --options .config/typedoc/config.cjs"
   },
   "devDependencies": {
-    "@peculiar/asn1-schema": "^2.7.0",
-    "@peculiar/asn1-x509": "^2.7.0",
+    "@peculiar/asn1-schema": "^2.10.0",
+    "@peculiar/asn1-x509": "^2.10.0",
     "@types/bun": "latest",
-    "typedoc": "^0.28.19"
+    "typedoc": "^0.28.20"
   },
   "peerDependencies": {
-    "typescript": "^5"
+    "typescript": "^5.9.3"
   },
   "dependencies": {
     "@noble/curves": "^2.4.0",

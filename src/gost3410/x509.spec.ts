@@ -25,8 +25,8 @@ const proceedCertitificate = (
     const signer = getCurveByOid(parameters.curve);
     if(!signer) throw new Error("Invalid curve parameters");
 
-    const digest = getHashByOid(parameters.digest);
-    if(!digest) throw new Error("Invalid hash function");
+    const hasher = getHashByOid(parameters.digest);
+    if(!hasher) throw new Error("Invalid hash function");
 
     // Unfortunately, GOST doesn't have unificated serialization
     const spk = signer.utils.swapPoint(new Uint8Array(
@@ -41,7 +41,7 @@ const proceedCertitificate = (
 
     expect(signer.verify(
         concatBytes(_4, spk),
-        digest(new Uint8Array(parsed.tbsCertificateRaw!)).reverse(),
+        hasher(new Uint8Array(parsed.tbsCertificateRaw!)).reverse(),
         signer.utils.swapPoint(new Uint8Array(parsed.signatureValue))
     )).toBeTrue();
 }
