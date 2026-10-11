@@ -11,7 +11,7 @@
  * - Reverse digest
  * - Reverse/swap public key
  * 
- * Unfortunately, GOST doesn't unify serialization, this realization serialize as in standard (Big-Endian)
+ * Unfortunately, GOST doesn't unify serialization, this realization serialize as in standard (Big-Endian, public key - `X||Y`, signature - `R||S`)
  * 
  * API is close to `@noble/curves`
  * @module
@@ -50,9 +50,9 @@ export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
         seed: Math.max(getMinHashLength(Fn.ORDER), 16)
     });
     const drbg = createStreebogHmacDrbg(Point.Fn);
-
-    const prepareHash = (digest: TArg<Uint8Array>): bigint =>
-        Fn.create(bytesToNumberBE(digest)) || 1n;
+    // Bytes to field
+    const b2f = (bytes: TArg<Uint8Array>) => Fn.create(bytesToNumberBE(bytes));
+    const prepareHash = (digest: TArg<Uint8Array>): bigint => b2f(digest) || 1n;
 
     /**
      * Computes public key for a secret key. Checks for validity of the secret key.
@@ -83,7 +83,7 @@ export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
         const d = Fn.fromBytes(secretKey);
         if(!Fn.isValidNot0(d)) throw new Error("Invalid private key");
 
-        const k = rand ? Fn.create(bytesToNumberBE(rand)) : drbg(d, digest, extraEntropy);
+        const k = rand ? b2f(rand) : drbg(d, digest, extraEntropy);
         if(rand && k === 0n) throw new Error("Invalid rand specified");
 
         const r = Fn.create(BASE.multiply(k).x),
