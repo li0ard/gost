@@ -1,4 +1,4 @@
-import { concatBytes, hexToBytes, type TArg } from "@noble/hashes/utils.js";
+import { hexToBytes, type TArg } from "@noble/hashes/utils.js";
 import { test, expect } from "bun:test";
 import { AsnConvert, AsnProp, AsnPropTypes, OctetString } from "@peculiar/asn1-schema";
 import { Certificate } from "@peculiar/asn1-x509";
@@ -12,12 +12,9 @@ class PublicKeyParameters {
     digest!: string;
 }
 
-const _4 = new Uint8Array([4]);
-
 const proceedCertitificate = (
-    privateKey: TArg<Uint8Array>,
     certificate: TArg<Uint8Array>,
-    checkPublicKey: boolean = true
+    privateKey?: TArg<Uint8Array>,
 ) => {
     const parsed = AsnConvert.parse(certificate, Certificate);
     const parameters = AsnConvert.parse(parsed.tbsCertificate.subjectPublicKeyInfo.algorithm.parameters!, PublicKeyParameters);
@@ -29,20 +26,19 @@ const proceedCertitificate = (
     if(!hasher) throw new Error("Invalid hash function");
 
     // Unfortunately, GOST doesn't have unificated serialization
-    const spk = signer.utils.swapPoint(new Uint8Array(
+    // So we just reverse bytes (LE -> BE) and swap halves (`Y ‖ X` -> `X ‖ Y`)
+    const spk = signer.utils.swapHalves(new Uint8Array(
         AsnConvert.parse(parsed.tbsCertificate.subjectPublicKeyInfo.subjectPublicKey, OctetString).buffer
     ).reverse());
 
-    if(checkPublicKey) {
-        const pk = signer.getPublicKey(privateKey, false);
-        // Unfortunately, GOST doesn't have unificated serialization
-        expect(pk.subarray(1)).toStrictEqual(spk);
-    }
+    if(privateKey)
+        expect(signer.getPublicKey(privateKey)).toStrictEqual(spk);
 
     expect(signer.verify(
-        concatBytes(_4, spk),
+        spk,
         hasher(new Uint8Array(parsed.tbsCertificateRaw!)).reverse(),
-        signer.utils.swapPoint(new Uint8Array(parsed.signatureValue))
+        // We just swap halves of signature (`S ‖ R` -> `R ‖ S`)
+        signer.utils.swapHalves(new Uint8Array(parsed.signatureValue))
     )).toBeTrue();
 }
 
@@ -64,7 +60,7 @@ bXBsZYIBATAKBggqhQMHAQEDAgNBAF5bm4BbARR6hJLEoWJkOsYV3Hd7kXQQjz3C
 dqQfmHrz6TI6Xojdh/t8ckODv/587NS5/6KsM77vc6Wh90NAT2s=
     `;
 
-    proceedCertitificate(privateKey, Uint8Array.fromBase64(certificate));
+    proceedCertitificate(Uint8Array.fromBase64(certificate), privateKey);
 });
 
 test("[X.509] GOST R 34.10-2012 512 bit", () => {
@@ -88,7 +84,7 @@ SFtxWYdmg0au8XI9Xb8vTC1qdwWID7FFjMWDNQZb6lYh/J+8F2xKylvB5nIlRZqO
 o3eUNFkNyHJwQCk2WoOlO16zwGk2tdKH4KmD5w==
     `;
 
-    proceedCertitificate(privateKey, Uint8Array.fromBase64(certificate));
+    proceedCertitificate(Uint8Array.fromBase64(certificate), privateKey);
 });
 
 test("[X.509] GOST R 34.10-2012 (Root CA)", () => {
@@ -118,7 +114,7 @@ ZHEEMAgGBiqFA2RxBTAGBgRVHSAAMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MB0GA1Ud
 DgQWBBTCVPG0a9RMt+BtNrQjkPH+wzybBjAKBggqhQMHAQEDAgNBAJr6/eI7rHL7+FsQnoH2i6DVxqal
 bIxLKj05edpZGPLLb6B2PTAMya7pSt9hb8QnFABgsR4IE5gT4VVkDWbX/n4=
     `
-    proceedCertitificate(new Uint8Array(), Uint8Array.fromBase64(certificate), false);
+    proceedCertitificate(Uint8Array.fromBase64(certificate));
 });
 
 test("[X.509] GOST R 34.10-2012 (Root CA #2)", () => {
@@ -152,5 +148,5 @@ NDAyMDIwOTU1NTRaMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYEFMFFwA33zK3KCN8nTOEzuIoh+8tT
 MAoGCCqFAwcBAQMCA0EA5Ut/qWZRPqet7G/mMKM7rp0P319KF0V09kId5GT/AClPLy87uaw2s5+nVDcf
 tXlmoAcK5cHYxGeGIoU3lxdN6w==
     `
-    proceedCertitificate(new Uint8Array(), Uint8Array.fromBase64(certificate), false);
+    proceedCertitificate(Uint8Array.fromBase64(certificate));
 });

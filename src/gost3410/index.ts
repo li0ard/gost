@@ -11,9 +11,19 @@
  * - Reverse digest
  * - Reverse/swap public key
  * 
- * Unfortunately, GOST doesn't unify serialization, this realization serialize as in standard (Big-Endian, public key - `X||Y`, signature - `R||S`)
+ * Unfortunately, GOST doesn't unify serialization, this realization serialize as in standard (Big-Endian, public key - `X ‖ Y`, signature - `R ‖ S`)
+ * 
+ * Public keys can be emitted as:
+ * - `X ‖ Y` - Canonical GOST format for X.509 etc. (**Default**, `removePrefix=true`, `isCompressed=false`)
+ * - `04 ‖ X ‖ Y` - SEC1 uncompressed point (`removePrefix=false`, `isCompressed=false`)
+ * - `02/03 ‖ X` - SEC1 compressed point (`removePrefix=false`, `isCompressed=true`)
+ * - `X` - raw X coordinate of point (**Non recoverable**, `removePrefix=true`, `isCompressed=true`)
+ * 
+ * All four formats are accepted by `deserializePoint` for input
+ * except `X` (raw X coordinate), which cannot be recovered.
  * 
  * API is close to `@noble/curves`
+ * 
  * @module
  */
 import { bytesToNumberBE, concatBytes, type TArg, type TRet, randomBytes, abytes } from "@noble/curves/utils.js";
@@ -26,19 +36,23 @@ import {
     GOSTR3410_2012_512_PARAM_SET_C, GOSTR3410_2012_512_TEST_PARAM_SET
 } from "./const.js";
 import { getMinHashLength, mapHashToField } from "@noble/curves/abstract/modular.js";
-import { weierstrass } from "@noble/curves/abstract/weierstrass.js";
+import { weierstrass, type WeierstrassPoint } from "@noble/curves/abstract/weierstrass.js";
 import { createKeygen, type AffinePoint } from "@noble/curves/abstract/curve.js";
 import type { ECDSA, SignOpts } from "../types.js";
 import { createStreebogHmacDrbg } from "./drbg.js";
 import { ahash, type CHash, type Hash } from "@noble/hashes/utils.js";
 
-/** Swap `x` and `y` in point bytes */
-const swapPoint = (point: TArg<Uint8Array>): TRet<Uint8Array> => concatBytes(
+const swapHalves = (point: TArg<Uint8Array>): TRet<Uint8Array> => concatBytes(
     point.subarray(point.length / 2),
     point.subarray(0, point.length / 2),
 );
 
-/** Creates GOST R 34.10-2012 (2001) signing interface */
+const _4 = Uint8Array.of(4);
+const cutSec1Prefix = (point: TArg<Uint8Array>, cut: boolean): TRet<Uint8Array> => (
+    cut ? point.subarray(1) : point
+) as TRet<Uint8Array>;
+
+/** Creates GOST R 34.10-2012 signing interface */
 export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
     const Point = weierstrass(parameters), { Fp, Fn, BASE } = Point;
     const lengths = Object.freeze({
@@ -55,14 +69,35 @@ export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
     const prepareHash = (digest: TArg<Uint8Array>): bigint => b2f(digest) || 1n;
 
     /**
+     * Deserialize point
+     * 
+     * If there's uncompressed point without prefix -> add prefix and deserialize
+     * Otherwise deserialize as usual
+     */
+    const deserializePoint = (point: TArg<Uint8Array>): WeierstrassPoint<bigint> => {
+        if(point.length === 2 * Fp.BYTES) return Point.fromBytes(concatBytes(
+            _4, point
+        ));
+        else return Point.fromBytes(point);
+    }
+
+    /**
      * Computes public key for a secret key. Checks for validity of the secret key.
-     * @param isCompressed - whether to return compact (default), or full key
+     * 
+     * **Public key formats:**
+     * - `removePrefix=false`
+     * @param removePrefix - whether to remove SEC1 prefix from point bytes (default - `true`)
+     * @param isCompressed - whether to return compact, or full key (default)
      * @returns Public key, full when `isCompressed=false`; short when `isCompressed=true`
      */
     const getPublicKey = (
-        secretKey: TArg<Uint8Array>, 
-        isCompressed: boolean = true
-    ): TRet<Uint8Array> => BASE.multiply(Fn.fromBytes(secretKey)).toBytes(isCompressed);
+        secretKey: TArg<Uint8Array>,
+        removePrefix: boolean = true,
+        isCompressed: boolean = false
+    ): TRet<Uint8Array> => cutSec1Prefix(
+        BASE.multiply(Fn.fromBytes(secretKey)).toBytes(isCompressed),
+        removePrefix
+    );
 
     /**
      * Signs a message hash with a secret key.
@@ -121,7 +156,7 @@ export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
         const z1 = Fn.mul(s, v), z2 = Fn.mul(Fn.neg(r), v);
 
         try {
-            const R = BASE.mulAddUnsafe(z1, Point.fromBytes(publicKey), z2);
+            const R = BASE.mulAddUnsafe(z1, deserializePoint(publicKey), z2);
             return Fn.create(R.x) === r;
         } catch { return false; }
     }
@@ -143,7 +178,7 @@ export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
         abytes(secretKeyA, undefined, "secretKeyA");
         abytes(publicKeyB, undefined, "publicKeyB");
         abytes(ukm, undefined, "ukm");
-        const key = Point.fromBytes(publicKeyB)
+        const key = deserializePoint(publicKeyB)
         .multiply(Fn.fromBytes(secretKeyA))
         .multiply(Fn.mul(parameters.h, bytesToNumberBE(ukm)));
 
@@ -192,7 +227,7 @@ export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
         }
     }
 
-    const utils = Object.freeze({ uv2xy, xy2uv, swapPoint, parameters });
+    const utils = Object.freeze({ uv2xy, xy2uv, swapHalves, parameters, deserializePoint });
 
     return Object.freeze({
         Point, getPublicKey, getSharedSecret,

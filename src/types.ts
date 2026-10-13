@@ -1,4 +1,4 @@
-import type { AffinePoint, WeierstrassPointCons } from "@noble/curves/abstract/weierstrass.js";
+import type { AffinePoint, WeierstrassPoint, WeierstrassPointCons } from "@noble/curves/abstract/weierstrass.js";
 import type { CHash, TArg, TRet } from "@noble/hashes/utils.js";
 import type { GostCurveParameters } from "./gost3410/index.js";
 
@@ -132,8 +132,15 @@ export type ECDSA = {
         /** Convert point from Weierstrass to Twisted Edwards (if supported) */
         xy2uv: (point: AffinePoint<bigint>) => AffinePoint<bigint>;
         /** Swap `x` and `y` in uncompressed point bytes (or `r` and `s` in signature) */
-        swapPoint: (point: TArg<Uint8Array>) => TRet<Uint8Array>;
+        swapHalves: (point: TArg<Uint8Array>) => TRet<Uint8Array>;
         /** Curve parameters passed to `gost3410` constructor */
         parameters: GostCurveParameters;
+        /**
+         * Deserialize point
+         * 
+         * If there's uncompressed point without prefix -> add prefix and deserialize
+         * Otherwise deserialize as usual
+         */
+        deserializePoint: (point: TArg<Uint8Array>) => WeierstrassPoint<bigint>;
     }
 }
