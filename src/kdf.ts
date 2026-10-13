@@ -66,7 +66,6 @@ export const kdf_tree_gostr3411_2012_256 = (
  * @param iter - iteration count. Higher values increase CPU cost.
  * @param dkLen - desired derived key length in bytes, must be `>= 1` per RFC 8018 §5.2.
  * @returns Derived key bytes.
- * @throws If the PBKDF2 iteration count or derived-key settings are invalid. {@link Error}
  * @example
  * ```ts
  * import { streebog256pbkdf2 } from '@li0ard/gost/kdf.js';
@@ -88,7 +87,6 @@ export const streebog256pbkdf2 = (
  * @param iter - iteration count. Higher values increase CPU cost.
  * @param dkLen - desired derived key length in bytes, must be `>= 1` per RFC 8018 §5.2.
  * @returns Derived key bytes.
- * @throws If the PBKDF2 iteration count or derived-key settings are invalid. {@link Error}
  * @example
  * ```ts
  * import { streebog512pbkdf2 } from '@li0ard/gost/kdf.js';
@@ -110,7 +108,6 @@ export const streebog512pbkdf2 = (
  * @param iter - iteration count. Higher values increase CPU cost.
  * @param dkLen - desired derived key length in bytes, must be `>= 1` per RFC 8018 §5.2.
  * @returns Derived key bytes.
- * @throws If the PBKDF2 iteration count or derived-key settings are invalid. {@link Error}
  * @example
  * ```ts
  * import { gost341194pbkdf2 } from '@li0ard/gost/kdf.js';

@@ -122,7 +122,7 @@ abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
     }
 
     abstract _cloneInto(to?: Streebog<T>): Streebog<T>;
-    clone(): Streebog<T> { return this._cloneInto(); }
+    abstract clone(): Streebog<T>;
 
     private processBlock(block: TArg<Uint8Array>) {
         const rev = copyBytes(block).reverse();
@@ -190,6 +190,7 @@ export class _Streebog256 extends Streebog<_Streebog256> {
     _cloneInto(to?: _Streebog256): _Streebog256 {
         return this._copyState(to ||= new _Streebog256());
     }
+    clone(): _Streebog256 { return this._cloneInto(); }
 }
 
 /** Internal Streebog-512 hash class*/
@@ -203,6 +204,7 @@ export class _Streebog512 extends Streebog<_Streebog512> {
     _cloneInto(to?: _Streebog512): _Streebog512 {
         return this._copyState(to ||= new _Streebog512());
     }
+    clone(): _Streebog512 { return this._cloneInto(); }
 }
 
 /**
