@@ -1,8 +1,9 @@
-import { concatBytes, hexToBytes, type TArg } from "@noble/hashes/utils.js";
+import { concatBytes, copyBytes, hexToBytes, type TArg } from "@noble/hashes/utils.js";
 import { test, expect } from "bun:test";
 import { AsnConvert, AsnProp, AsnPropTypes, OctetString } from "@peculiar/asn1-schema";
 import { Certificate } from "@peculiar/asn1-x509";
 import { getCurveByOid, getHashByOid } from "../oids.js";
+import type { ECDSA, SignOpts } from "../types.js";
 
 class PublicKeyParameters {
     @AsnProp({ type: AsnPropTypes.ObjectIdentifier })
@@ -12,7 +13,9 @@ class PublicKeyParameters {
     digest!: string;
 }
 
-const publicKeyLEToBE = (publicKey: TArg<Uint8Array>) => {
+const rev = (b: TArg<Uint8Array>) => copyBytes(b).reverse();
+
+const reverseCoords = (publicKey: TArg<Uint8Array>) => {
     if (publicKey.length % 2 !== 0)
         throw new Error("Invalid public key length");
     const half = publicKey.length / 2;
@@ -23,38 +26,68 @@ const publicKeyLEToBE = (publicKey: TArg<Uint8Array>) => {
     );
 }
 
+/**
+ * Adapter for PKI practice
+ * 
+ * Unfortunately, GOST doesn't have unificated serialization
+ * 
+ * The core follows the standard, real-world PKI encodes values differently:
+ * - Secret key, digest: LE
+ * - Public key: `X ‖ Y`, each coordinate LE
+ * - Signature: `S ‖ R`, each half BE
+ */
+const toPkiAdapter = (signer: ECDSA) => {
+    const { swapHalves } = signer.utils;
+
+    return Object.freeze({
+        getPublicKey: (
+            secretKey: TArg<Uint8Array>
+        ) => reverseCoords(signer.getPublicKey(rev(secretKey))),
+
+        sign: (
+            secretKey: TArg<Uint8Array>,
+            digest: TArg<Uint8Array>,
+            opts?: SignOpts
+        ) => swapHalves(signer.sign(rev(secretKey), rev(digest), opts)),
+
+        verify: (
+            publicKey: TArg<Uint8Array>,
+            digest: TArg<Uint8Array>,
+            signature: TArg<Uint8Array>
+        ) => signer.verify(reverseCoords(publicKey), rev(digest), swapHalves(signature))
+    });
+}
+
 const proceedCertitificate = (
     certificate: TArg<Uint8Array>,
     privateKey?: TArg<Uint8Array>,
 ) => {
     const parsed = AsnConvert.parse(certificate, Certificate);
     const parameters = AsnConvert.parse(parsed.tbsCertificate.subjectPublicKeyInfo.algorithm.parameters!, PublicKeyParameters);
-    
-    const signer = getCurveByOid(parameters.curve);
-    if(!signer) throw new Error("Invalid curve parameters");
+
+    const curve = getCurveByOid(parameters.curve);
+    if(!curve) throw new Error("Invalid curve parameters");
+    const signer = toPkiAdapter(curve);
 
     const hasher = getHashByOid(parameters.digest);
     if(!hasher) throw new Error("Invalid hash function");
 
-    // Unfortunately, GOST doesn't have unificated serialization
-    // Coordinates stored as `X ‖ Y` in LE format, but library accepts in BE format
-    const spk = publicKeyLEToBE(new Uint8Array(
+    const spk = new Uint8Array(
         AsnConvert.parse(parsed.tbsCertificate.subjectPublicKeyInfo.subjectPublicKey, OctetString).buffer
-    ));
+    );
 
     if(privateKey)
         expect(signer.getPublicKey(privateKey)).toStrictEqual(spk);
 
     expect(signer.verify(
         spk,
-        hasher(new Uint8Array(parsed.tbsCertificateRaw!)).reverse(),
-        // We just swap halves of signature (`S ‖ R` -> `R ‖ S`)
-        signer.utils.swapHalves(new Uint8Array(parsed.signatureValue))
+        hasher(new Uint8Array(parsed.tbsCertificateRaw!)),
+        new Uint8Array(parsed.signatureValue)
     )).toBeTrue();
 }
 
 test("[X.509] GOST R 34.10-2012 256 bit", () => {
-    const privateKey = hexToBytes("BFCF1D623E5CDD3032A7C6EABB4A923C46E43D640FFEAAF2C3ED39A8FA399924");
+    const privateKey = hexToBytes("BFCF1D623E5CDD3032A7C6EABB4A923C46E43D640FFEAAF2C3ED39A8FA399924").reverse();
     const certificate = `
 MIICYjCCAg+gAwIBAgIBATAKBggqhQMHAQEDAjBWMSkwJwYJKoZIhvcNAQkBFhpH
 b3N0UjM0MTAtMjAxMkBleGFtcGxlLmNvbTEpMCcGA1UEAxMgR29zdFIzNDEwLTIw
@@ -68,14 +101,13 @@ BAQDAgHGMA8GA1UdEwQIMAYBAf8CAQEwfgYDVR0BBHcwdYAU1fIeN1HaPbw+XWUz
 bkJ+kHJUT0ChWqRYMFYxKTAnBgkqhkiG9w0BCQEWGkdvc3RSMzQxMC0yMDEyQGV4
 YW1wbGUuY29tMSkwJwYDVQQDEyBHb3N0UjM0MTAtMjAxMiAoMjU2IGJpdCkgZXhh
 bXBsZYIBATAKBggqhQMHAQEDAgNBAF5bm4BbARR6hJLEoWJkOsYV3Hd7kXQQjz3C
-dqQfmHrz6TI6Xojdh/t8ckODv/587NS5/6KsM77vc6Wh90NAT2s=
-    `;
+dqQfmHrz6TI6Xojdh/t8ckODv/587NS5/6KsM77vc6Wh90NAT2s=`;
 
     proceedCertitificate(Uint8Array.fromBase64(certificate), privateKey);
 });
 
 test("[X.509] GOST R 34.10-2012 512 bit", () => {
-    const privateKey = hexToBytes("3FC01CDCD4EC5F972EB482774C41E66DB7F380528DFE9E67992BA05AEE462435757530E641077CE587B976C8EEB48C48FD33FD175F0C7DE6A44E014E6BCB074B");
+    const privateKey = hexToBytes("3FC01CDCD4EC5F972EB482774C41E66DB7F380528DFE9E67992BA05AEE462435757530E641077CE587B976C8EEB48C48FD33FD175F0C7DE6A44E014E6BCB074B").reverse();
     const certificate = `
 MIIC6DCCAlSgAwIBAgIBATAKBggqhQMHAQEDAzBWMSkwJwYJKoZIhvcNAQkBFhpH
 b3N0UjM0MTAtMjAxMkBleGFtcGxlLmNvbTEpMCcGA1UEAxMgR29zdFIzNDEwLTIw
@@ -92,8 +124,7 @@ CQEWGkdvc3RSMzQxMC0yMDEyQGV4YW1wbGUuY29tMSkwJwYDVQQDEyBHb3N0UjM0
 MTAtMjAxMiAoNTEyIGJpdCkgZXhhbXBsZYIBATAKBggqhQMHAQEDAwOBgQBObS7o
 ppPTXzHyVR1DtPa8b57nudJzI4czhsfeX5HDntOq45t9B/qSs8dC6eGxbhHZ9zCO
 SFtxWYdmg0au8XI9Xb8vTC1qdwWID7FFjMWDNQZb6lYh/J+8F2xKylvB5nIlRZqO
-o3eUNFkNyHJwQCk2WoOlO16zwGk2tdKH4KmD5w==
-    `;
+o3eUNFkNyHJwQCk2WoOlO16zwGk2tdKH4KmD5w==`;
 
     proceedCertitificate(Uint8Array.fromBase64(certificate), privateKey);
 });
@@ -123,8 +154,8 @@ MDYuMjAxODA/BgUqhQNkbwQ2DDTQn9CQ0JrQnCDCq9Ca0YDQuNC/0YLQvtCf0YDQviBIU03CuyDQstC1
 0YDRgdC40LggMi4wMEMGA1UdIAQ8MDowCAYGKoUDZHEBMAgGBiqFA2RxAjAIBgYqhQNkcQMwCAYGKoUD
 ZHEEMAgGBiqFA2RxBTAGBgRVHSAAMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MB0GA1Ud
 DgQWBBTCVPG0a9RMt+BtNrQjkPH+wzybBjAKBggqhQMHAQEDAgNBAJr6/eI7rHL7+FsQnoH2i6DVxqal
-bIxLKj05edpZGPLLb6B2PTAMya7pSt9hb8QnFABgsR4IE5gT4VVkDWbX/n4=
-    `
+bIxLKj05edpZGPLLb6B2PTAMya7pSt9hb8QnFABgsR4IE5gT4VVkDWbX/n4=`;
+
     proceedCertitificate(Uint8Array.fromBase64(certificate));
 });
 
@@ -157,7 +188,7 @@ AQAwQwYDVR0gBDwwOjAIBgYqhQNkcQEwCAYGKoUDZHECMAgGBiqFA2RxAzAIBgYqhQNkcQQwCAYGKoUD
 ZHEFMAYGBFUdIAAwDgYDVR0PAQH/BAQDAgEGMCsGA1UdEAQkMCKADzIwMjYwMjAyMDk1NTU0WoEPMjAz
 NDAyMDIwOTU1NTRaMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYEFMFFwA33zK3KCN8nTOEzuIoh+8tT
 MAoGCCqFAwcBAQMCA0EA5Ut/qWZRPqet7G/mMKM7rp0P319KF0V09kId5GT/AClPLy87uaw2s5+nVDcf
-tXlmoAcK5cHYxGeGIoU3lxdN6w==
-    `
+tXlmoAcK5cHYxGeGIoU3lxdN6w==`;
+
     proceedCertitificate(Uint8Array.fromBase64(certificate));
 });
