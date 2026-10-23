@@ -1,4 +1,4 @@
-import { hexToBytes, type TArg } from "@noble/hashes/utils.js";
+import { concatBytes, hexToBytes, type TArg } from "@noble/hashes/utils.js";
 import { test, expect } from "bun:test";
 import { AsnConvert, AsnProp, AsnPropTypes, OctetString } from "@peculiar/asn1-schema";
 import { Certificate } from "@peculiar/asn1-x509";
@@ -10,6 +10,17 @@ class PublicKeyParameters {
 
     @AsnProp({ type: AsnPropTypes.ObjectIdentifier })
     digest!: string;
+}
+
+const publicKeyLEToBE = (publicKey: TArg<Uint8Array>) => {
+    if (publicKey.length % 2 !== 0)
+        throw new Error("Invalid public key length");
+    const half = publicKey.length / 2;
+
+    return concatBytes(
+        publicKey.slice(0, half).reverse(),
+        publicKey.slice(half).reverse()
+    );
 }
 
 const proceedCertitificate = (
@@ -26,10 +37,10 @@ const proceedCertitificate = (
     if(!hasher) throw new Error("Invalid hash function");
 
     // Unfortunately, GOST doesn't have unificated serialization
-    // So we just reverse bytes (LE -> BE) and swap halves (`Y ‖ X` -> `X ‖ Y`)
-    const spk = signer.utils.swapHalves(new Uint8Array(
+    // Coordinates stored as `X ‖ Y` in LE format, but library accepts in BE format
+    const spk = publicKeyLEToBE(new Uint8Array(
         AsnConvert.parse(parsed.tbsCertificate.subjectPublicKeyInfo.subjectPublicKey, OctetString).buffer
-    ).reverse());
+    ));
 
     if(privateKey)
         expect(signer.getPublicKey(privateKey)).toStrictEqual(spk);
