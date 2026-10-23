@@ -2,12 +2,13 @@
  * Implementation of ObjectIdentifier's (OID) registry for curves and hash algorithms
  * @module
  */
+import type { CHash } from "@noble/hashes/utils.js";
 import { CURVES } from "./gost3410/index.js";
 import { gost341194 } from "./gost341194/index.js";
 import { streebog256, streebog512 } from "./streebog/index.js";
-import type { CipherOrHashFunctionWrapper, ECDSA } from "./types.js";
+import type { ECDSA } from "./types.js";
 
-const HASHES_OID: Record<string, CipherOrHashFunctionWrapper> = {
+const HASHES_OID: Record<string, CHash> = {
     "1.2.643.7.1.1.2.1": gost341194,
     "1.2.643.7.1.1.2.2": streebog256,
     "1.2.643.7.1.1.2.3": streebog512
@@ -20,4 +21,4 @@ export const getCurveByOid = (oid: string): ECDSA | undefined => {
 }
 
 /** Get hash function by OID */
-export const getHashByOid = (oid: string): CipherOrHashFunctionWrapper | undefined => HASHES_OID[oid];
+export const getHashByOid = (oid: string): CHash | undefined => HASHES_OID[oid];
