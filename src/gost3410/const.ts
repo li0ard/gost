@@ -20,7 +20,7 @@ export const GOSTR3410_2001_PARAM_SET_CC: Readonly<GostCurveParameters> = {
     b: 0x2d06B4265ebc749ff7d0f1f1f88232e81632e9088fd44b7787d5e407e955080cn,
     Gx: 2n,
     Gy: 0xa20e034bf8813ef5c18d01105e726a17eb248b264ae9706f440bedc8ccb6b22cn,
-    h: 1n,
+    h: 2n,
     oids: ["1.2.643.2.9.1.8.1"]
 };
 
