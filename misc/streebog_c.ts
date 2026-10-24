@@ -3,7 +3,7 @@
 
 import { hexToBytes, bytesToHex, type TArg, type TRet, createView } from "@noble/hashes/utils.js";
 import { PI } from "../src/kuznyechik/const.js";
-import { pad1, xorBytes } from "../src/utils.js";
+import { reverseBytes, xorBytes } from "../src/utils.js";
 import { numberToBytesBE } from "@noble/curves/utils.js";
 
 const BLOCKSIZE = 64;
@@ -60,7 +60,7 @@ const L = (input: TArg<Uint8Array>): TRet<Uint8Array> => {
     const result = new Uint8Array(BLOCKSIZE), view = createView(result);
     for (let i = 0; i < 8; i++) {
         const parts = new Uint32Array(2);
-        const tmp = input.slice(i * 8, i * 8 + 8).reverse();
+        const tmp = reverseBytes(input, i * 8, i * 8 + 8);
 
         for (let j = 0; j < 8; j++) {
             for (let k = 0; k < 8; k++) {

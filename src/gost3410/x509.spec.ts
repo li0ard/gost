@@ -1,9 +1,10 @@
-import { concatBytes, copyBytes, hexToBytes, type TArg } from "@noble/hashes/utils.js";
+import { hexToBytes, type TArg } from "@noble/hashes/utils.js";
 import { test, expect } from "bun:test";
 import { AsnConvert, AsnProp, AsnPropTypes, OctetString } from "@peculiar/asn1-schema";
 import { Certificate } from "@peculiar/asn1-x509";
 import { getCurveByOid, getHashByOid } from "../oids.js";
 import type { ECDSA, SignOpts } from "../types.js";
+import { reverseBytes } from "../utils.js";
 
 class PublicKeyParameters {
     @AsnProp({ type: AsnPropTypes.ObjectIdentifier })
@@ -11,19 +12,6 @@ class PublicKeyParameters {
 
     @AsnProp({ type: AsnPropTypes.ObjectIdentifier })
     digest!: string;
-}
-
-const rev = (b: TArg<Uint8Array>) => copyBytes(b).reverse();
-
-const reverseCoords = (publicKey: TArg<Uint8Array>) => {
-    if (publicKey.length % 2 !== 0)
-        throw new Error("Invalid public key length");
-    const half = publicKey.length / 2;
-
-    return concatBytes(
-        publicKey.slice(0, half).reverse(),
-        publicKey.slice(half).reverse()
-    );
 }
 
 /**
@@ -37,24 +25,24 @@ const reverseCoords = (publicKey: TArg<Uint8Array>) => {
  * - Signature: `S ‖ R`, each half BE
  */
 const toPkiAdapter = (signer: ECDSA) => {
-    const { swapHalves } = signer.utils;
+    const { swapHalves, reverseCoords } = signer.utils;
 
     return Object.freeze({
         getPublicKey: (
             secretKey: TArg<Uint8Array>
-        ) => reverseCoords(signer.getPublicKey(rev(secretKey))),
+        ) => reverseCoords(signer.getPublicKey(reverseBytes(secretKey))),
 
         sign: (
             secretKey: TArg<Uint8Array>,
             digest: TArg<Uint8Array>,
             opts?: SignOpts
-        ) => swapHalves(signer.sign(rev(secretKey), rev(digest), opts)),
+        ) => swapHalves(signer.sign(reverseBytes(secretKey), reverseBytes(digest), opts)),
 
         verify: (
             publicKey: TArg<Uint8Array>,
             digest: TArg<Uint8Array>,
             signature: TArg<Uint8Array>
-        ) => signer.verify(reverseCoords(publicKey), rev(digest), swapHalves(signature))
+        ) => signer.verify(reverseCoords(publicKey), reverseBytes(digest), swapHalves(signature))
     });
 }
 

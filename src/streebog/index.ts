@@ -2,10 +2,10 @@
  * Implementation of GOST R 34.11-2012 ([RFC 6986](https://datatracker.ietf.org/doc/html/rfc6986.html)) "Streebog" hash function
  * @module
  */
-import { abool, abytes, aoutput, clean, copyBytes, createHasher, createView, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { abool, abytes, aoutput, clean, createHasher, createView, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { A, C } from "./const.js";
 import { PI } from "../kuznyechik/const.js";
-import { xorBytes } from "../utils.js";
+import { reverseBytes, xorBytes } from "../utils.js";
 import { numberToBytesBE } from "@noble/curves/utils.js";
 
 const _512 = new Uint8Array([0, 0, 2, 0]);
@@ -38,7 +38,8 @@ const L = (input: TArg<Uint8Array>): TRet<Uint8Array> => {
     const result = new Uint8Array(64), view = createView(result);
     for (let i = 0; i < 8; i++) {
         const parts = new Uint32Array(2);
-        const tmp = input.slice(i * 8, i * 8 + 8).reverse();
+        const offset = i * 8;
+        const tmp = reverseBytes(input, offset, offset + 8);
         for (let j = 0; j < 8; j++) {
             for (let k = 0; k < 8; k++) {
                 if ((tmp[7 - j] >> 7 - k) & 1) {
@@ -47,8 +48,8 @@ const L = (input: TArg<Uint8Array>): TRet<Uint8Array> => {
                 }
             }
         }
-        view.setUint32(i * 8, parts[0]);
-        view.setUint32(i * 8 + 4, parts[1]);
+        view.setUint32(offset, parts[0]);
+        view.setUint32(offset + 4, parts[1]);
     }
 
     return result;
@@ -125,7 +126,7 @@ abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
     abstract clone(): Streebog<T>;
 
     private processBlock(block: TArg<Uint8Array>) {
-        const rev = copyBytes(block).reverse();
+        const rev = reverseBytes(block);
         this.hash.set(G(this.n, this.hash, rev));
         add512Into(this.n, _512);
         add512Into(this.sigma, rev);
@@ -166,7 +167,7 @@ abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
         aoutput(buf, this);
         const paddedMsg = new Uint8Array(this.blockLen);
         const offset = this.blockLen - this.pos;
-        paddedMsg.set(this.buffer.slice(0, this.pos).reverse(), offset);
+        paddedMsg.set(reverseBytes(this.buffer, 0, this.pos), offset);
         paddedMsg[offset - 1] = 1;
 
         this.hash.set(G(this.n, this.hash, paddedMsg));
@@ -174,7 +175,7 @@ abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
         add512Into(this.sigma, paddedMsg);
         this.hash.set(G2(G2(this.hash, this.n), this.sigma));
 
-        buf.set(this.hash.slice(0, this.outputLen).reverse());
+        buf.set(reverseBytes(this.hash, 0, this.outputLen));
         this.destroy();
     }
 }

@@ -72,3 +72,9 @@ export const abytesAligned = (
     const message = atitle(title) + 'expected Uint8Array' + ofLen + ', got ' + got;
     throw new RangeError(message);
 }
+
+export const reverseBytes = (
+    b: TArg<Uint8Array>,
+    from?: number,
+    to?: number
+): TRet<Uint8Array> => b.slice(from, to).reverse();

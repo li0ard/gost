@@ -6,7 +6,7 @@ import { abytes, aoutput, clean, concatBytes, copyBytes, createHasher, type Hash
 import { Magma } from "../magma/index.js";
 import { GOSTR_3411_94_CRYPTOPRO_PARAM_SET } from "../magma/const.js";
 import { bytesToNumberBE, numberToBytesBE } from "@noble/curves/utils.js";
-import { xorBytes } from "../utils.js";
+import { reverseBytes, xorBytes } from "../utils.js";
 
 const r = (1n << 256n) - 1n;
 const C3 = new Uint8Array([
@@ -57,10 +57,10 @@ const _step = (
     const k4 = _getMagma(u,v,sbox);
 
     const x = concatBytes(
-        k4.encrypt(hin.slice(0,8).reverse()).reverse(),
-        k3.encrypt(hin.slice(8,16).reverse()).reverse(),
-        k2.encrypt(hin.slice(16,24).reverse()).reverse(),
-        k1.encrypt(hin.slice(24,32).reverse()).reverse(),
+        k4.encrypt(reverseBytes(hin, 0, 8)).reverse(),
+        k3.encrypt(reverseBytes(hin, 8, 16)).reverse(),
+        k2.encrypt(reverseBytes(hin, 16, 24)).reverse(),
+        k1.encrypt(reverseBytes(hin, 24, 32)).reverse(),
     );
     for(let i = 0; i < 12; i++) x.set(chi(x));
 
@@ -151,7 +151,7 @@ export class _Gost341194 implements Hash<_Gost341194> {
         aoutput(buf, this);
         if (this.pos > 0) {
             const part = new Uint8Array(this.blockLen);
-            part.set(this.buffer.slice(0, this.pos).reverse(), this.blockLen - this.pos);
+            part.set(reverseBytes(this.buffer, 0, this.pos), this.blockLen - this.pos);
             this.len += BigInt(this.pos) * 8n;
             this.checksum = (this.checksum + bytesToNumberBE(part)) & r;
             this.h.set(_step(this.h, part, this.sbox));

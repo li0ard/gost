@@ -133,6 +133,8 @@ export type ECDSA = {
         xy2uv: (point: AffinePoint<bigint>) => AffinePoint<bigint>;
         /** Swap `x` and `y` in uncompressed point bytes (or `r` and `s` in signature) */
         swapHalves: (point: TArg<Uint8Array>) => TRet<Uint8Array>;
+        /** Swap byte order in point coordinates */
+        reverseCoords: (point: TArg<Uint8Array>) => TRet<Uint8Array>;
         /** Curve parameters passed to `gost3410` constructor */
         parameters: GostCurveParameters;
         /**

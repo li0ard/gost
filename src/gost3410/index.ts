@@ -41,11 +41,23 @@ import { createKeygen, type AffinePoint } from "@noble/curves/abstract/curve.js"
 import type { ECDSA, SignOpts } from "../types.js";
 import { createStreebogHmacDrbg } from "./drbg.js";
 import { ahash, type CHash, type Hash } from "@noble/hashes/utils.js";
+import { reverseBytes } from "../utils.js";
 
 const swapHalves = (point: TArg<Uint8Array>): TRet<Uint8Array> => concatBytes(
     point.subarray(point.length / 2),
     point.subarray(0, point.length / 2),
 );
+
+const reverseCoords = (point: TArg<Uint8Array>): TRet<Uint8Array> => {
+    if (point.length % 2 !== 0)
+        throw new Error("Invalid point length");
+    const half = point.length / 2;
+
+    return concatBytes(
+        reverseBytes(point, 0, half),
+        reverseBytes(point, half),
+    );
+}
 
 const _4 = Uint8Array.of(4);
 const cutSec1Prefix = (point: TArg<Uint8Array>, cut: boolean): TRet<Uint8Array> => (
@@ -227,7 +239,7 @@ export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
         }
     }
 
-    const utils = Object.freeze({ uv2xy, xy2uv, swapHalves, parameters, deserializePoint });
+    const utils = Object.freeze({ uv2xy, xy2uv, swapHalves, reverseCoords, parameters, deserializePoint });
 
     return Object.freeze({
         Point, getPublicKey, getSharedSecret,
