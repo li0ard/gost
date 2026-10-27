@@ -5,87 +5,100 @@
 import { abool, abytes, aoutput, clean, createHasher, createView, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { A, C } from "./const.js";
 import { PI } from "../kuznyechik/const.js";
-import { reverseBytes, xorBytes } from "../utils.js";
-import { numberToBytesBE } from "@noble/curves/utils.js";
 
-const _512 = new Uint8Array([0, 0, 2, 0]);
+// Precompute Substitution+ Permutation + Linear transformations
+let T: Uint32Array | undefined;
 
-const add512Into = (dst: TArg<Uint8Array>, src: TArg<Uint8Array>): void => {
-    const off = 64 - src.length;
-    let carry = 0;
-    for (let i = 63; i >= 0; i--) {
-        const j = i - off;
-        if (j < 0 && carry === 0) break;
-        const s = dst[i] + (j >= 0 ? src[j] : 0) + carry;
-        dst[i] = s & 0xff;
-        carry = s >> 8;
-    }
-}
-
-// Substitution + Permutation in 1 function
-const SP = (input: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
-    PI[input[0]], PI[input[8]], PI[input[16]], PI[input[24]], PI[input[32]], PI[input[40]], PI[input[48]], PI[input[56]],
-    PI[input[1]], PI[input[9]], PI[input[17]], PI[input[25]], PI[input[33]], PI[input[41]], PI[input[49]], PI[input[57]],
-    PI[input[2]], PI[input[10]], PI[input[18]], PI[input[26]], PI[input[34]], PI[input[42]], PI[input[50]], PI[input[58]],
-    PI[input[3]], PI[input[11]], PI[input[19]], PI[input[27]], PI[input[35]], PI[input[43]], PI[input[51]], PI[input[59]], 
-    PI[input[4]], PI[input[12]], PI[input[20]], PI[input[28]], PI[input[36]], PI[input[44]], PI[input[52]], PI[input[60]],
-    PI[input[5]], PI[input[13]], PI[input[21]], PI[input[29]], PI[input[37]], PI[input[45]], PI[input[53]], PI[input[61]],
-    PI[input[6]], PI[input[14]], PI[input[22]], PI[input[30]], PI[input[38]], PI[input[46]], PI[input[54]], PI[input[62]],
-    PI[input[7]], PI[input[15]], PI[input[23]], PI[input[31]], PI[input[39]], PI[input[47]], PI[input[55]], PI[input[63]]
-]);
-
-const L = (input: TArg<Uint8Array>): TRet<Uint8Array> => {
-    const result = new Uint8Array(64), view = createView(result);
-    for (let i = 0; i < 8; i++) {
-        const parts = new Uint32Array(2);
-        const offset = i * 8;
-        const tmp = reverseBytes(input, offset, offset + 8);
-        for (let j = 0; j < 8; j++) {
+const initT = (): Uint32Array => {
+    const t = new Uint32Array(8 * 256 * 2);
+    for (let c = 0; c < 8; c++) {
+        for (let v = 0; v < 256; v++) {
+            const s = PI[v];
+            let hi = 0, lo = 0;
             for (let k = 0; k < 8; k++) {
-                if ((tmp[7 - j] >> 7 - k) & 1) {
-                    parts[0] ^= A[j * 16 + k * 2];
-                    parts[1] ^= A[j * 16 + k * 2 + 1];
+                if ((s >> (7 - k)) & 1) {
+                    hi ^= A[2 * (c * 8 + k)];
+                    lo ^= A[2 * (c * 8 + k) + 1];
                 }
             }
+            const idx = ((c << 8) | v) << 1;
+            t[idx] = hi;
+            t[idx + 1] = lo;
         }
-        view.setUint32(offset, parts[0]);
-        view.setUint32(offset + 4, parts[1]);
+    }
+    console.log("beep boop we generated");
+    return t;
+}
+
+const K = new Uint32Array(16),
+    S = new Uint32Array(16),
+    X = new Uint32Array(16),
+    Y = new Uint32Array(16),
+    M = new Uint32Array(16);
+
+const LPS = (x: Uint32Array, out: Uint32Array, t: Uint32Array) => {
+    for (let r = 0; r < 8; r++) {
+        const sh = 24 - ((r & 3) << 3);
+        const o = r >> 2;
+        let hi = 0, lo = 0, idx: number;
+
+        idx = ((0 << 8) | ((x[0 + o] >>> sh) & 0xff)) << 1; hi ^= t[idx]; lo ^= t[idx + 1];
+        idx = ((1 << 8) | ((x[2 + o] >>> sh) & 0xff)) << 1; hi ^= t[idx]; lo ^= t[idx + 1];
+        idx = ((2 << 8) | ((x[4 + o] >>> sh) & 0xff)) << 1; hi ^= t[idx]; lo ^= t[idx + 1];
+        idx = ((3 << 8) | ((x[6 + o] >>> sh) & 0xff)) << 1; hi ^= t[idx]; lo ^= t[idx + 1];
+        idx = ((4 << 8) | ((x[8 + o] >>> sh) & 0xff)) << 1; hi ^= t[idx]; lo ^= t[idx + 1];
+        idx = ((5 << 8) | ((x[10 + o] >>> sh) & 0xff)) << 1; hi ^= t[idx]; lo ^= t[idx + 1];
+        idx = ((6 << 8) | ((x[12 + o] >>> sh) & 0xff)) << 1; hi ^= t[idx]; lo ^= t[idx + 1];
+        idx = ((7 << 8) | ((x[14 + o] >>> sh) & 0xff)) << 1; hi ^= t[idx]; lo ^= t[idx + 1];
+
+        out[2 * r] = hi;
+        out[2 * r + 1] = lo;
+    }
+}
+
+// h will be mutated
+const G = (h: Uint32Array, n: Uint32Array | null, m: Uint32Array) => {
+    const t = (T ||= initT());
+    if (n) for (let i = 0; i < 16; i++) X[i] = n[i] ^ h[i];
+    else X.set(h);
+    LPS(X, K, t);
+
+    for (let i = 0; i < 16; i++) S[i] = K[i] ^ m[i];
+
+    for (let r = 0; r < 12; r++) {
+        const off = r << 4;
+        for (let i = 0; i < 16; i++) X[i] = K[i] ^ C[off + i];
+        LPS(X, K, t);
+        LPS(S, Y, t);
+        for (let i = 0; i < 16; i++) S[i] = Y[i] ^ K[i];
     }
 
-    return result;
+    for (let i = 0; i < 16; i++) h[i] ^= S[i] ^ m[i];
 }
 
-const LPS = (input: TArg<Uint8Array>): TRet<Uint8Array> => L(SP(input));
-
-const E = (block: TArg<Uint8Array>, keys: TArg<Uint8Array>): TRet<Uint8Array> => {
-    // block will be mutated
-    const c = xorBytes(block, keys);
-    block.set(LPS(xorBytes(block, C.subarray(0, 64)))); c.set(xorBytes(LPS(c), block));
-    block.set(LPS(xorBytes(block, C.subarray(64, 128)))); c.set(xorBytes(LPS(c), block));
-    block.set(LPS(xorBytes(block, C.subarray(128, 192)))); c.set(xorBytes(LPS(c), block));
-    block.set(LPS(xorBytes(block, C.subarray(192, 256)))); c.set(xorBytes(LPS(c), block));
-    block.set(LPS(xorBytes(block, C.subarray(256, 320)))); c.set(xorBytes(LPS(c), block));
-    block.set(LPS(xorBytes(block, C.subarray(320, 384)))); c.set(xorBytes(LPS(c), block));
-    block.set(LPS(xorBytes(block, C.subarray(384, 448)))); c.set(xorBytes(LPS(c), block));
-    block.set(LPS(xorBytes(block, C.subarray(448, 512)))); c.set(xorBytes(LPS(c), block));
-    block.set(LPS(xorBytes(block, C.subarray(512, 576)))); c.set(xorBytes(LPS(c), block));
-    block.set(LPS(xorBytes(block, C.subarray(576, 640)))); c.set(xorBytes(LPS(c), block));
-    block.set(LPS(xorBytes(block, C.subarray(640, 704)))); c.set(xorBytes(LPS(c), block));
-    block.set(LPS(xorBytes(block, C.subarray(704, 768)))); c.set(xorBytes(LPS(c), block));
-
-    return c;
+const add512 = (dst: Uint32Array, src: Uint32Array) => {
+    let carry = 0;
+    for (let i = 15; i >= 0; i--) {
+        const s = dst[i] + src[i] + carry;
+        dst[i] = s;
+        carry = s > 0xffffffff ? 1 : 0;
+    }
 }
 
-const G = (
-    n: TArg<Uint8Array>,
-    hash: TArg<Uint8Array>,
-    message: TArg<Uint8Array>
-): TRet<Uint8Array> => xorBytes(xorBytes(E(LPS(xorBytes(n, hash)), message), hash), message);
+const addNum = (dst: Uint32Array, x: number) => {
+    let s = dst[15] + x;
+    dst[15] = s;
+    let carry = s > 0xffffffff ? 1 : 0;
+    for (let i = 14; i >= 0 && carry; i--) {
+        s = dst[i] + 1;
+        dst[i] = s;
+        carry = s > 0xffffffff ? 1 : 0;
+    }
+}
 
-const G2 = (
-    hash: TArg<Uint8Array>,
-    message: TArg<Uint8Array>
-): TRet<Uint8Array> => xorBytes(xorBytes(E(LPS(hash), message), hash), message);
+const loadBlock = (v: DataView, off: number, out: Uint32Array) => {
+    for (let i = 0; i < 16; i++) out[i] = v.getUint32(off + ((15 - i) << 2), true);
+}
 
 /** Streebog (GOST R 34.11-2012) hash function */
 abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
@@ -93,23 +106,22 @@ abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
     readonly outputLen: number;
     readonly canXOF = false;
     protected buffer = new Uint8Array(this.blockLen);
+    protected bufView = createView(this.buffer);
     protected pos = 0;
-    protected hash: Uint8Array;
-    protected n: Uint8Array;
-    protected sigma: Uint8Array;
+    protected hash = new Uint32Array(16);
+    protected n = new Uint32Array(16);
+    protected sigma = new Uint32Array(16);
 
     /** Streebog (GOST R 34.11-2012) hash function */
     constructor(private is512: boolean) {
         abool(is512);
         this.outputLen = is512 ? 64 : 32;
-        this.hash = new Uint8Array(this.blockLen).fill(is512 ? 0 : 1);
-        this.n = new Uint8Array(this.blockLen);
-        this.sigma = new Uint8Array(this.blockLen);
+        this.hash.fill(is512 ? 0 : 0x01010101);
     }
 
     destroy() {
         clean(this.buffer, this.n, this.sigma);
-        this.hash.fill(this.is512 ? 0 : 1);
+        this.hash.fill(this.is512 ? 0 : 0x01010101);
         this.pos = 0;
     }
 
@@ -125,15 +137,16 @@ abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
     abstract _cloneInto(to?: Streebog<T>): Streebog<T>;
     abstract clone(): Streebog<T>;
 
-    private processBlock(block: TArg<Uint8Array>) {
-        const rev = reverseBytes(block);
-        this.hash.set(G(this.n, this.hash, rev));
-        add512Into(this.n, _512);
-        add512Into(this.sigma, rev);
+    private processBlock(v: DataView, off: number) {
+        loadBlock(v, off, M);
+        G(this.hash, this.n, M);
+        addNum(this.n, 512);
+        add512(this.sigma, M);
     }
 
     update(data: TArg<Uint8Array>): this {
         abytes(data);
+        const view = createView(data);
         let offset = 0;
         if (this.pos > 0) {
             const take = Math.min(this.blockLen - this.pos, data.length);
@@ -141,13 +154,13 @@ abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
             this.pos += take;
             offset = take;
             if (this.pos === this.blockLen) {
-                this.processBlock(this.buffer);
+                this.processBlock(this.bufView, 0);
                 this.pos = 0;
             }
         }
 
         for (; offset + this.blockLen <= data.length; offset += this.blockLen)
-            this.processBlock(data.subarray(offset, offset + this.blockLen));
+            this.processBlock(view, offset);
 
         if (offset < data.length) {
             this.buffer.set(data.subarray(offset), 0);
@@ -165,17 +178,21 @@ abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
 
     digestInto(buf: TArg<Uint8Array>) {
         aoutput(buf, this);
-        const paddedMsg = new Uint8Array(this.blockLen);
-        const offset = this.blockLen - this.pos;
-        paddedMsg.set(reverseBytes(this.buffer, 0, this.pos), offset);
-        paddedMsg[offset - 1] = 1;
+        this.buffer.fill(0, this.pos);
+        this.buffer[this.pos] = 1;
+        loadBlock(this.bufView, 0, M);
 
-        this.hash.set(G(this.n, this.hash, paddedMsg));
-        add512Into(this.n, numberToBytesBE(this.pos * 8, 4));
-        add512Into(this.sigma, paddedMsg);
-        this.hash.set(G2(G2(this.hash, this.n), this.sigma));
+        G(this.hash, this.n, M);
+        addNum(this.n, this.pos * 8);
+        add512(this.sigma, M);
+        G(this.hash, null, this.n);
+        G(this.hash, null, this.sigma);
 
-        buf.set(reverseBytes(this.hash, 0, this.outputLen));
+        const out = createView(buf);
+        const words = this.outputLen >> 2;
+        for (let i = 0; i < words; i++)
+            out.setUint32(this.outputLen - 4 - (i << 2), this.hash[i], true);
+
         this.destroy();
     }
 }
@@ -221,7 +238,7 @@ export class _Streebog512 extends Streebog<_Streebog512> {
  * streebog256.create().update(new Uint8Array([97, 98, 99])).digest();
  * ```
  */
-export const streebog256 = createHasher(_Streebog256.create);
+export const streebog256 = /* @__PURE__ */ createHasher(_Streebog256.create);
 /**
  * Streebog-512 hash function
  * 
@@ -235,4 +252,4 @@ export const streebog256 = createHasher(_Streebog256.create);
  * streebog512.create().update(new Uint8Array([97, 98, 99])).digest();
  * ```
  */
-export const streebog512 = createHasher(_Streebog512.create);
+export const streebog512 = /* @__PURE__ */ createHasher(_Streebog512.create);

@@ -29,4 +29,10 @@ describe("[HASH] Streebog (GOST R 34.11-2012)", () => {
         hexToBytes("c766085540caaa8953bfcf7a1ba220619cee50d65dc242f82f23ba4b180b18e0"),
         hexToBytes("3d46a117a91ac9220f6dee4d1db83f0d018f799b58ca118648f7d6e4f82e37e951459776e866d4e31467afc843ce88e8d6db62e3fb93cb9fcd60703de7492828")
     ));
+
+    test.skipIf(process.env.SKIP_LONG == "1")("#4", () => performTest(
+        new Uint8Array(1048576).fill(0xFF), // 1 mb
+        hexToBytes("e3e81987e2044e318404d6ba8090d80ee2c5a6080a9bc67ce7d1f95c50d360d6"),
+        hexToBytes("84ee56ea07517dbd06f2c512c9916d84aa4038b237fb187e93a941d2536fd6bd10f013879b093ccdc150060ab88a440b35c2766a33260b8e2055d8311ea14912")
+    ), 10000);
 });
