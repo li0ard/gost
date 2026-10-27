@@ -26,7 +26,7 @@ const initT = (): Uint32Array => {
             t[idx + 1] = lo;
         }
     }
-    console.log("beep boop we generated");
+
     return t;
 }
 
@@ -38,8 +38,8 @@ const K = new Uint32Array(16),
 
 const LPS = (x: Uint32Array, out: Uint32Array, t: Uint32Array) => {
     for (let r = 0; r < 8; r++) {
-        const sh = 24 - ((r & 3) << 3);
-        const o = r >> 2;
+        const sh = 24 - ((r & 3) << 3),
+            o = r >> 2;
         let hi = 0, lo = 0, idx: number;
 
         idx = ((0 << 8) | ((x[0 + o] >>> sh) & 0xff)) << 1; hi ^= t[idx]; lo ^= t[idx + 1];
