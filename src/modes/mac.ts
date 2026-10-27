@@ -80,7 +80,7 @@ export const mac_legacy = (
                 prev1 = bytesToNumberLE(iv.subarray(0, 4));
             const feedback = new Uint8Array(cipher.blockSize);
             for (let i = 0; i < paddedData.length; i += cipher.blockSize) {
-                feedback.set(numberToBytesLE(prev1, 4), 0);
+                feedback.set(numberToBytesLE(prev1, 4));
                 feedback.set(numberToBytesLE(prev0, 4), 4);
 
                 const out = cipher.proceedBlock(

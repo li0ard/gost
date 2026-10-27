@@ -22,4 +22,9 @@ describe("[HASH] GOST R 34.11-94", () => {
         const expected = hexToBytes("b9cd35b9a7a4b3d17ce4f8772630d765bd278164516d2227e7f29128bf236919");
         expect(gost341194(hexToBytes("d0cf11e0a1b11ae1000000000000000000000000000000003e000300feff0900060000000000000000000000010000000100000000000000001000002400000001000000feffffff0000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"))).toStrictEqual(expected);
     });
+
+    test.skipIf(process.env.SKIP_LONG == "1")("#4", () => {
+        const expected = hexToBytes("335725919be22157bf01f0ba6ba416e2ac9dd0aa08e31783419e48fc35417806").reverse();
+        expect(gost341194(new Uint8Array(1048576).fill(0xFF))).toStrictEqual(expected);
+    });
 });

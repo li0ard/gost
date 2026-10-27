@@ -163,7 +163,7 @@ abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
             this.processBlock(view, offset);
 
         if (offset < data.length) {
-            this.buffer.set(data.subarray(offset), 0);
+            this.buffer.set(data.subarray(offset));
             this.pos = data.length - offset;
         }
 
