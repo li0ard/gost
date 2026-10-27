@@ -22,7 +22,7 @@ export const mgm = (cipher: Cipher, nonce: TArg<Uint8Array>, tagSize = cipher.bl
     const halfbs = cipher.blockSize / 2,
         mul = cipher.blockSize === 8 ? gf64Multiply : gf128Multiply,
         maxSize = (1n << BigInt(bs * 4)) - 1n;
-    
+
     const _incr = (data: TArg<Uint8Array>): TRet<Uint8Array> =>
         numberToBytesBE(bytesToNumberBE(data) + 1n, halfbs),
         incr_r = (data: TArg<Uint8Array>) => data.set(_incr(data.subarray(halfbs)), halfbs),
@@ -78,7 +78,6 @@ export const mgm = (cipher: Cipher, nonce: TArg<Uint8Array>, tagSize = cipher.bl
                 ciphertext = crypt(icn, plaintext);
             return concatBytes(ciphertext, auth(icn, ciphertext, aad));
         },
-
         open: (ciphertext: TArg<Uint8Array>, aad: TArg<Uint8Array> = new Uint8Array()): TRet<Uint8Array> => {
             abytes(ciphertext, undefined, "ciphertext");
             abytes(aad, undefined, "aad");

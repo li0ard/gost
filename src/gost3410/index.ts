@@ -164,9 +164,9 @@ export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
             s = Fn.fromBytes(signature.subarray(Fn.BYTES));
         if(!Fn.isValidNot0(r) || !Fn.isValidNot0(s)) return false;
 
-        const v = Fn.inv(prepareHash(digest));
-        const z1 = Fn.mul(s, v), z2 = Fn.mul(Fn.neg(r), v);
-
+        const v = Fn.inv(prepareHash(digest)),
+            z1 = Fn.mul(s, v),
+            z2 = Fn.mul(Fn.neg(r), v);
         try {
             const R = BASE.mulAddUnsafe(z1, deserializePoint(publicKey), z2);
             return Fn.create(R.x) === r;

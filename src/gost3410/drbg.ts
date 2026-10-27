@@ -22,7 +22,6 @@ export const createStreebogHmacDrbg = (Fn: TArg<IField<bigint>>) => {
         const blen = bytes.length * 8;
         let x = bytesToNumberBE(bytes);
         if (blen > Fn.BITS) x >>= BigInt(blen - Fn.BITS);
-
         return x;
     }
 
@@ -33,7 +32,7 @@ export const createStreebogHmacDrbg = (Fn: TArg<IField<bigint>>) => {
         ];
         if(extraEntropy) seedArgs.push(randomBytes(Fn.BYTES));
         const seed = concatBytes(...seedArgs);
-    
+
         const V = new Uint8Array(Fn.BYTES).fill(0x01),
             K = hmac(new Uint8Array(Fn.BYTES), concatBytes(V, zero, seed));
         V.set(hmac(K, V));
