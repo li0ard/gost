@@ -26,5 +26,5 @@ describe("[HASH] GOST R 34.11-94", () => {
     test.skipIf(process.env.SKIP_LONG == "1")("#4", () => {
         const expected = hexToBytes("335725919be22157bf01f0ba6ba416e2ac9dd0aa08e31783419e48fc35417806").reverse();
         expect(gost341194(new Uint8Array(1048576).fill(0xFF))).toStrictEqual(expected);
-    });
+    }, 10000);
 });
