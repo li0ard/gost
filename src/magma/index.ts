@@ -7,10 +7,9 @@
  * - GOST R 34.12-2015 uses BE byte order (instead of LE in GOST 28147-89)
  * @module
  */
-import { bytesToNumberBE, bytesToNumberLE, concatBytes, numberToBytesBE, numberToBytesLE, type TArg, type TRet } from "@noble/curves/utils.js";
+import { abool, abytes, createView, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { GOST_28147_89_CRYPTO_PRO_A_PARAM_SET, TC26_GOST_28147_PARAM_Z, magmaKeySequences } from "./const.js";
 import type { Cipher } from "../types.js";
-import { abool, abytes, createView } from "@noble/hashes/utils.js";
 
 const BLOCKSIZE = 8;
 
@@ -47,6 +46,8 @@ export class Magma implements Cipher {
     readonly keySize = 32;
     readonly blockSize = BLOCKSIZE;
 
+    private rk = new Uint32Array(8);
+
     /**
      * Magma (GOST R 34.12-2015 and GOST 28147-89) cipher
      * 
@@ -55,32 +56,41 @@ export class Magma implements Cipher {
      * @param isLegacy - whether to use GOST 28147-89 instead of GOST R 34.12-2015
      */
     constructor(
-        private key: TArg<Uint8Array>,
+        key: TArg<Uint8Array>,
         private sbox: TArg<Uint8Array> = TC26_GOST_28147_PARAM_Z,
         public isLegacy: boolean = false
     ) {
         abytes(key, this.keySize, "key");
         abytes(sbox, 64, "sbox");
         abool(isLegacy, "isLegacy");
+
+        const view = createView(key);
+        for (let i = 0; i < 8; i++) this.rk[i] = view.getUint32(i * 4, isLegacy);
     }
 
-    proceedBlock(block: TArg<Uint8Array>, sequence: number[]): TRet<Uint8Array> {
+    proceedBlock(block: TArg<Uint8Array>, sequence: ArrayLike<number>): TRet<Uint8Array> {
         abytes(block, this.blockSize, "block");
-        const roundKeys = extendKey(this.key, sequence, this.isLegacy);
 
-        const F = block.subarray(0, 4), S = block.subarray(4, 8);
-        const bytesToNumber = this.isLegacy ? bytesToNumberLE : bytesToNumberBE;
-        
-        let a0 = Number(bytesToNumber(this.isLegacy ? S : F)),
-            a1 = Number(bytesToNumber(this.isLegacy ? F : S));
-        for (let i = 0; i < roundKeys.length; i++) {
+        const inView = createView(block);
+        let a0 = inView.getUint32(this.isLegacy ? 4 : 0, this.isLegacy),
+            a1 = inView.getUint32(this.isLegacy ? 0 : 4, this.isLegacy);
+        for (let i = 0; i < sequence.length; i++) {
             const temp = a1;
-            a1 = (a0 ^ G((a1 + roundKeys[i]) >>> 0, this.sbox)) >>> 0;
+            a1 = (a0 ^ G((a1 + this.rk[sequence[i]]) >>> 0, this.sbox)) >>> 0;
             a0 = temp;
         }
 
-        if (this.isLegacy) return concatBytes(numberToBytesLE(a0, 4), numberToBytesLE(a1, 4));
-        else return concatBytes(numberToBytesBE(a1, 4), numberToBytesBE(a0, 4));
+        const out = new Uint8Array(BLOCKSIZE),
+            outView = createView(out);
+        if (this.isLegacy) {
+            outView.setUint32(0, a0, true);
+            outView.setUint32(4, a1, true);
+        } else {
+            outView.setUint32(0, a1);
+            outView.setUint32(4, a0);
+        }
+
+        return out;
     }
 
     encrypt(plaintext: TArg<Uint8Array>): TRet<Uint8Array> {
