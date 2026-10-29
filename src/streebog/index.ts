@@ -9,7 +9,7 @@ import { PI } from "../kuznyechik/const.js";
 // Precompute Substitution+ Permutation + Linear transformations
 let T: Uint32Array | undefined;
 
-const initT = (): Uint32Array => {
+const initT = (): TRet<Uint32Array> => {
     const t = new Uint32Array(8 * 256 * 2);
     for (let c = 0; c < 8; c++) {
         for (let v = 0; v < 256; v++) {
@@ -36,7 +36,7 @@ const K = new Uint32Array(16),
     Y = new Uint32Array(16),
     M = new Uint32Array(16);
 
-const LPS = (x: Uint32Array, out: Uint32Array, t: Uint32Array) => {
+const LPS = (x: TArg<Uint32Array>, out: TArg<Uint32Array>, t: TArg<Uint32Array>) => {
     for (let r = 0; r < 8; r++) {
         const sh = 24 - ((r & 3) << 3),
             o = r >> 2;
@@ -57,7 +57,7 @@ const LPS = (x: Uint32Array, out: Uint32Array, t: Uint32Array) => {
 }
 
 // h will be mutated
-const G = (h: Uint32Array, n: Uint32Array | null, m: Uint32Array) => {
+const G = (h: TArg<Uint32Array>, n: TArg<Uint32Array> | null, m: TArg<Uint32Array>) => {
     const t = (T ||= initT());
     if (n) for (let i = 0; i < 16; i++) X[i] = n[i] ^ h[i];
     else X.set(h);
@@ -76,7 +76,7 @@ const G = (h: Uint32Array, n: Uint32Array | null, m: Uint32Array) => {
     for (let i = 0; i < 16; i++) h[i] ^= S[i] ^ m[i];
 }
 
-const add512 = (dst: Uint32Array, src: Uint32Array) => {
+const add512 = (dst: TArg<Uint32Array>, src: TArg<Uint32Array>) => {
     let carry = 0;
     for (let i = 15; i >= 0; i--) {
         const s = dst[i] + src[i] + carry;
@@ -85,7 +85,7 @@ const add512 = (dst: Uint32Array, src: Uint32Array) => {
     }
 }
 
-const addNum = (dst: Uint32Array, x: number) => {
+const addNum = (dst: TArg<Uint32Array>, x: number) => {
     let s = dst[15] + x;
     dst[15] = s;
     let carry = s > 0xffffffff ? 1 : 0;
@@ -96,7 +96,7 @@ const addNum = (dst: Uint32Array, x: number) => {
     }
 }
 
-const loadBlock = (v: DataView, off: number, out: Uint32Array) => {
+const loadBlock = (v: DataView, off: number, out: TArg<Uint32Array>) => {
     for (let i = 0; i < 16; i++) out[i] = v.getUint32(off + ((15 - i) << 2), true);
 }
 

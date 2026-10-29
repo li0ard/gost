@@ -2,13 +2,11 @@
  * Implementation of GOST R 34.11-94 ([RFC 5831](https://datatracker.ietf.org/doc/html/rfc5831.html)) hash function
  * @module
  */
-import { abytes, aoutput, clean, concatBytes, copyBytes, createHasher, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { abytes, aoutput, clean, createHasher, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { MagmaLegacy } from "../magma/index.js";
 import { GOSTR_3411_94_CRYPTOPRO_PARAM_SET } from "../magma/const.js";
-import { bytesToNumberBE, numberToBytesBE } from "@noble/curves/utils.js";
-import { reverseBytes, xorBytes } from "../utils.js";
+import { numberToBytesBE } from "@noble/curves/utils.js";
 
-const r = (1n << 256n) - 1n;
 const C3 = new Uint8Array([
     0xff, 0x00, 0xff, 0xff, 0x00, 0x00, 0x00, 0xff,
     0xff, 0x00, 0x00, 0xff, 0x00, 0xff, 0xff, 0x00,
@@ -16,62 +14,93 @@ const C3 = new Uint8Array([
     0xff, 0x00, 0xff, 0x00, 0xff, 0x00, 0xff, 0x00
 ]);
 
-const A = (x: TArg<Uint8Array>): TRet<Uint8Array> => concatBytes(
-    xorBytes(x.subarray(24,32), x.subarray(16,24)),
-    x.subarray(0,24)
-);
+const U = new Uint8Array(32),
+    V = new Uint8Array(32),
+    W = new Uint8Array(32),
+    X = new Uint8Array(32),
+    KEY = new Uint8Array(32),
+    BLOCK = new Uint8Array(32),
+    TMP = new Uint8Array(8),
+    CT = new Uint8Array(8);
 
-const P = (x: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
-    x[31], x[23], x[15], x[7], x[30], x[22], x[14], x[6],
-    x[29], x[21], x[13], x[5], x[28], x[20], x[12], x[4],
-    x[27], x[19], x[11], x[3], x[26], x[18], x[10], x[2],
-    x[25], x[17], x[9], x[1], x[24], x[16], x[8], x[0]
-]);
+const A = (x: TArg<Uint8Array>) => {
+    for (let i = 0; i < 8; i++) TMP[i] = x[24 + i] ^ x[16 + i];
+    x.copyWithin(8, 0, 24);
+    x.set(TMP);
+}
 
-const chi = (Y: TArg<Uint8Array>): TRet<Uint8Array> => new Uint8Array([
-    Y[30] ^ Y[28] ^ Y[26] ^ Y[24] ^ Y[6] ^ Y[0],
-    Y[31] ^ Y[29] ^ Y[27] ^ Y[25] ^ Y[7] ^ Y[1],
-    ...Y.subarray(0,30)
-]);
+const chi = (y: TArg<Uint8Array>) => {
+    const a = y[30] ^ y[28] ^ y[26] ^ y[24] ^ y[6] ^ y[0],
+        b = y[31] ^ y[29] ^ y[27] ^ y[25] ^ y[7] ^ y[1];
+    y.copyWithin(2, 0, 30);
+    y[0] = a;
+    y[1] = b;
+}
 
-const _getMagma = (
-    u: TArg<Uint8Array>,
-    v: TArg<Uint8Array>,
-    sbox: TArg<Uint8Array>
-): MagmaLegacy => new MagmaLegacy(P(xorBytes(u, v)), sbox);
+const deriveKey = (u: TArg<Uint8Array>, v: TArg<Uint8Array>) => {
+    for (let n = 0; n < 32; n++) {
+        const i = 31 - (n >> 2) - ((n & 3) << 3);
+        KEY[n] = u[i] ^ v[i];
+    }
+}
+
+const encrypt = (cipher: MagmaLegacy, plaintext: TArg<Uint8Array>, offset: number) => {
+    for (let i = 0; i < 8; i++) CT[i] = plaintext[offset + 7 - i];
+    const e = cipher.encrypt(CT);
+    for (let i = 0; i < 8; i++) X[offset + i] = e[7 - i];
+}
+
+const addLE = (acc: TArg<Uint8Array>, block: TArg<Uint8Array>) => {
+    let c = 0;
+    for (let i = 0; i < 32; i++) {
+        const s = acc[i] + block[i] + c;
+        acc[i] = s;
+        c = s >> 8;
+    }
+}
 
 const _step = (
     hin: TArg<Uint8Array>,
     m: TArg<Uint8Array>,
-    sbox: TArg<Uint8Array>
-): TRet<Uint8Array> => {
-    const k1 = _getMagma(hin,m,sbox);
+    sbox: TArg<Uint8Array>,
+    out: TArg<Uint8Array>
+) => {
+    deriveKey(hin, m);
+    const k1 = new MagmaLegacy(KEY, sbox);
 
-    let u = A(hin), v = A(A(m));
-    const k2 = _getMagma(u,v,sbox);
+    U.set(hin);
+    A(U);
+    V.set(m);
+    A(V);
+    A(V);
+    deriveKey(U, V);
+    const k2 = new MagmaLegacy(KEY, sbox);
 
-    u = xorBytes(A(u), C3), v = A(A(v));
-    const k3 = _getMagma(u,v,sbox);
+    A(U);
+    for (let i = 0; i < 32; i++) U[i] ^= C3[i];
+    A(V);
+    A(V);
+    deriveKey(U, V);
+    const k3 = new MagmaLegacy(KEY, sbox);
 
-    u = A(u), v = A(A(v));
-    const k4 = _getMagma(u,v,sbox);
+    A(U);
+    A(V);
+    A(V);
+    deriveKey(U, V);
+    const k4 = new MagmaLegacy(KEY, sbox);
 
-    const x = concatBytes(
-        k4.encrypt(reverseBytes(hin, 0, 8)).reverse(),
-        k3.encrypt(reverseBytes(hin, 8, 16)).reverse(),
-        k2.encrypt(reverseBytes(hin, 16, 24)).reverse(),
-        k1.encrypt(reverseBytes(hin, 24, 32)).reverse(),
-    );
-    for(let i = 0; i < 12; i++) x.set(chi(x));
+    encrypt(k4, hin, 0);
+    encrypt(k3, hin, 8);
+    encrypt(k2, hin, 16);
+    encrypt(k1, hin, 24);
 
-    x.set(xorBytes(
-        hin,
-        chi(xorBytes(x, m))
-    ));
+    for (let i = 0; i < 12; i++) chi(X);
+    for (let i = 0; i < 32; i++) W[i] = X[i] ^ m[i];
+    chi(W);
+    for (let i = 0; i < 32; i++) X[i] = hin[i] ^ W[i];
+    for (let i = 0; i < 61; i++) chi(X);
 
-    for(let i = 0; i < 61; i++) x.set(chi(x));
-
-    return x;
+    out.set(X);
 }
 
 /** Internal GOST R 34.11-94 hash class */
@@ -83,7 +112,7 @@ export class _Gost341194 implements Hash<_Gost341194> {
     private pos = 0;
     private h = new Uint8Array(32);
     private len = 0n;
-    private checksum = 0n;
+    private checksum = new Uint8Array(32);
 
     /** GOST R 34.11-94 hash function */
     constructor(
@@ -96,10 +125,9 @@ export class _Gost341194 implements Hash<_Gost341194> {
     static create(): _Gost341194 { return new _Gost341194(); }
 
     destroy() {
-        clean(this.buffer, this.h);
+        clean(this.buffer, this.h, this.checksum);
         this.pos = 0;
         this.len = 0n;
-        this.checksum = 0n;
     }
 
     clone(): _Gost341194 { return this._cloneInto(); }
@@ -110,16 +138,16 @@ export class _Gost341194 implements Hash<_Gost341194> {
         to.pos = this.pos;
         to.h.set(this.h);
         to.len = this.len;
-        to.checksum = this.checksum;
+        to.checksum.set(this.checksum);
 
         return to;
     }
 
-    private processBlock(block: TArg<Uint8Array>) {
-        const rev = copyBytes(block).reverse();
-        this.len += 256n;
-        this.checksum = (this.checksum + bytesToNumberBE(rev)) & r;
-        this.h.set(_step(this.h, rev, this.sbox));
+    private processBlock(block: TArg<Uint8Array>, bits: bigint = 256n) {
+        this.len += bits;
+        addLE(this.checksum, block);
+        for (let i = 0; i < 32; i++) BLOCK[i] = block[31 - i];
+        _step(this.h, BLOCK, this.sbox, this.h);
     }
 
     update(data: TArg<Uint8Array>): this {
@@ -150,19 +178,14 @@ export class _Gost341194 implements Hash<_Gost341194> {
     digestInto(buf: TArg<Uint8Array>) {
         aoutput(buf, this);
         if (this.pos > 0) {
-            const part = new Uint8Array(this.blockLen);
-            part.set(reverseBytes(this.buffer, 0, this.pos), this.blockLen - this.pos);
-            this.len += BigInt(this.pos) * 8n;
-            this.checksum = (this.checksum + bytesToNumberBE(part)) & r;
-            this.h.set(_step(this.h, part, this.sbox));
+            this.buffer.fill(0, this.pos);
+            this.processBlock(this.buffer, BigInt(this.pos) * 8n);
         }
 
-        const res = _step(
-            _step(this.h, numberToBytesBE(this.len, this.blockLen), this.sbox),
-            numberToBytesBE(this.checksum, this.blockLen),
-            this.sbox
-        );
-        buf.set(res.reverse());
+        _step(this.h, numberToBytesBE(this.len, this.blockLen), this.sbox, this.h);
+        for (let i = 0; i < 32; i++) BLOCK[i] = this.checksum[31 - i];
+        _step(this.h, BLOCK, this.sbox, this.h);
+        for (let i = 0; i < 32; i++) buf[i] = this.h[31 - i];
         this.destroy();
     }
 
