@@ -31,16 +31,6 @@ const G = (v: number, sbox: TArg<Uint8Array>): number => {
     return ((t << 11) | (t >>> 21)) >>> 0;
 }
 
-const extendKey = (key: TArg<Uint8Array>, sequence: number[], isLegacy: boolean): TRet<Uint32Array> => {
-    const view = createView(key);
-    const result = new Uint32Array(sequence.length);
-    
-    for (let i = 0; i < sequence.length; i++)
-        result[i] = view.getUint32(sequence[i] * 4, isLegacy);
-    
-    return result;
-}
-
 /** Magma (GOST R 34.12-2015 and GOST 28147-89) cipher */
 export class Magma implements Cipher {
     readonly keySize = 32;
