@@ -22,3 +22,12 @@ export const getCurveByOid = (oid: string): ECDSA | undefined => {
 
 /** Get hash function by OID */
 export const getHashByOid = (oid: string): CHash | undefined => HASHES_OID[oid];
+
+/** Get hash function by curve OID (for GOST R 34.10-2012 only) */
+export const getHashByCurveOid = (oid: string): CHash | undefined => {
+    const curve = getCurveByOid(oid);
+    if(!curve) return undefined;
+
+    if(curve.Point.Fn.BYTES === 32) return streebog256;
+    else return streebog512;
+}
