@@ -45,10 +45,9 @@ const genTable = (sbox: TArg<Uint8Array>, fn: (x: TArg<Uint8Array>) => void) => 
     return swap32IfBE(table);
 }
 
-const ID = Uint8Array.from({ length: 256 }, (_, i) => i),
-    T_ENC = genTable(PI, L),
+const T_ENC = genTable(PI, L),
     T_DEC = genTable(PI_REV, LR),
-    T_LINV = genTable(ID, LR);
+    T_LINV = genTable(Uint8Array.from({ length: 256 }, (_, i) => i), LR);
 
 const lookup = (table: TArg<Uint32Array>, s: TArg<Uint32Array>) => {
     let a = 0, b = 0, c = 0, d = 0;

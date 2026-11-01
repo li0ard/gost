@@ -13,23 +13,32 @@ import type { Cipher } from "../types.js";
 
 const BLOCKSIZE = 8;
 
-const G = (v: number, sbox: TArg<Uint8Array>): number => {
-    const nibble = (r: number, i: number): number => {
-        const b = sbox[r + (i >> 1)];
-        return (i & 1) === 0 ? (b >>> 4) : (b & 0x0f);
-    }
-
-    const t = (nibble(0, v & 0x0f) << 0) |
-        (nibble(8, (v >> 4) & 0x0f) << 4) |
-        (nibble(16, (v >> 8) & 0x0f) << 8) |
-        (nibble(24, (v >> 12) & 0x0f) << 12) |
-        (nibble(32, (v >> 16) & 0x0f) << 16) |
-        (nibble(40, (v >> 20) & 0x0f) << 20) |
-        (nibble(48, (v >> 24) & 0x0f) << 24) |
-        (nibble(56, (v >> 28) & 0x0f) << 28);
-
-    return ((t << 11) | (t >>> 21)) >>> 0;
+const nibble = (sbox: TArg<Uint8Array>, r: number, i: number): number => {
+    const b = sbox[(r << 3) + (i >> 1)];
+    return (i & 1) === 0 ? (b >>> 4) : (b & 0x0f);
 }
+
+const genTable = (sbox: TArg<Uint8Array>): TRet<Uint32Array> => {
+    const table = new Uint32Array(4 * 256);
+    for (let k = 0; k < 4; k++) {
+        for (let v = 0; v < 256; v++) {
+            const x = ((nibble(sbox, 2 * k + 1, v >> 4) << 4) | nibble(sbox, 2 * k, v & 15)) << (8 * k);
+            table[(k << 8) | v] = (x << 11) | (x >>> 21);
+        }
+    }
+    return table;
+}
+
+const TABLES = new WeakMap<Uint8Array, Uint32Array>();
+const getTable = (sbox: TArg<Uint8Array>): TRet<Uint32Array> => {
+    let t = TABLES.get(sbox);
+    if (!t) TABLES.set(sbox, t = genTable(sbox));
+    return t as TRet<Uint32Array>;
+}
+
+const G = (v: number, t: TArg<Uint32Array>): number =>
+    t[v & 0xff] ^ t[256 + ((v >>> 8) & 0xff)] ^
+    t[512 + ((v >>> 16) & 0xff)] ^ t[768 + (v >>> 24)];
 
 /** Magma (GOST R 34.12-2015 and GOST 28147-89) cipher */
 export class Magma implements Cipher {
@@ -61,12 +70,13 @@ export class Magma implements Cipher {
     proceedBlock(block: TArg<Uint8Array>, sequence: ArrayLike<number>): TRet<Uint8Array> {
         abytes(block, this.blockSize, "block");
 
-        const inView = createView(block);
+        const inView = createView(block),
+            t = getTable(this.sbox);
         let a0 = inView.getUint32(this.isLegacy ? 4 : 0, this.isLegacy),
             a1 = inView.getUint32(this.isLegacy ? 0 : 4, this.isLegacy);
         for (let i = 0; i < sequence.length; i++) {
             const temp = a1;
-            a1 = (a0 ^ G((a1 + this.rk[sequence[i]]) >>> 0, this.sbox)) >>> 0;
+            a1 = (a0 ^ G((a1 + this.rk[sequence[i]]) >>> 0, t)) >>> 0;
             a0 = temp;
         }
 
