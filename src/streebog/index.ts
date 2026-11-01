@@ -9,7 +9,7 @@ import { PI } from "../kuznyechik/const.js";
 // Precompute Substitution+ Permutation + Linear transformations
 let T: Uint32Array | undefined;
 
-const initT = (): TRet<Uint32Array> => {
+const genTable = (): TRet<Uint32Array> => {
     const t = new Uint32Array(8 * 256 * 2);
     for (let c = 0; c < 8; c++) {
         for (let v = 0; v < 256; v++) {
@@ -58,7 +58,7 @@ const LPS = (x: TArg<Uint32Array>, out: TArg<Uint32Array>, t: TArg<Uint32Array>)
 
 // h will be mutated
 const G = (h: TArg<Uint32Array>, n: TArg<Uint32Array> | null, m: TArg<Uint32Array>) => {
-    const t = (T ||= initT());
+    const t = (T ||= genTable());
     if (n) for (let i = 0; i < 16; i++) X[i] = n[i] ^ h[i];
     else X.set(h);
     LPS(X, K, t);
