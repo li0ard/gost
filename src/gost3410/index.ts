@@ -13,15 +13,6 @@
  * 
  * Unfortunately, GOST doesn't unify serialization, this realization serialize as in standard (Big-Endian, public key - `X ‖ Y`, signature - `R ‖ S`)
  * 
- * Public keys can be emitted as:
- * - `X ‖ Y` - Canonical GOST format for X.509 etc. (**Default**, `removePrefix=true`, `isCompressed=false`)
- * - `04 ‖ X ‖ Y` - SEC1 uncompressed point (`removePrefix=false`, `isCompressed=false`)
- * - `02/03 ‖ X` - SEC1 compressed point (`removePrefix=false`, `isCompressed=true`)
- * - `X` - raw X coordinate of point (**Non recoverable**, `removePrefix=true`, `isCompressed=true`)
- * 
- * All four formats are accepted by `deserializePoint` for input
- * except `X` (raw X coordinate), which cannot be recovered.
- * 
  * API is close to `@noble/curves`
  * 
  * @module
@@ -78,7 +69,7 @@ export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
     const drbg = createStreebogHmacDrbg(Point.Fn);
     // Bytes to field
     const b2f = (bytes: TArg<Uint8Array>) => Fn.create(bytesToNumberBE(bytes));
-    const prepareHash = (digest: TArg<Uint8Array>): bigint => b2f(digest) || 1n;
+    const prepareHash = (digest: TArg<Uint8Array>): bigint => b2f(digest) || Fn.ONE;
 
     /**
      * Deserialize point
@@ -95,21 +86,9 @@ export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
 
     /**
      * Computes public key for a secret key. Checks for validity of the secret key.
-     * 
-     * **Public key formats:**
-     * - `removePrefix=false`
-     * @param removePrefix - whether to remove SEC1 prefix from point bytes (default - `true`)
-     * @param isCompressed - whether to return compact, or full key (default)
-     * @returns Public key, full when `isCompressed=false`; short when `isCompressed=true`
      */
-    const getPublicKey = (
-        secretKey: TArg<Uint8Array>,
-        removePrefix: boolean = true,
-        isCompressed: boolean = false
-    ): TRet<Uint8Array> => cutSec1Prefix(
-        BASE.multiply(Fn.fromBytes(secretKey)).toBytes(isCompressed),
-        removePrefix
-    );
+    const getPublicKey = (secretKey: TArg<Uint8Array>): TRet<Uint8Array> =>
+        BASE.multiply(Fn.fromBytes(secretKey)).toBytes(false).subarray(1) as TRet<Uint8Array>;
 
     /**
      * Signs a message hash with a secret key.
@@ -131,7 +110,7 @@ export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
         if(!Fn.isValidNot0(d)) throw new Error("Invalid private key");
 
         const k = rand ? b2f(rand) : drbg(d, digest, extraEntropy);
-        if(rand && k === 0n) throw new Error("Invalid rand specified");
+        if(rand && k === Fn.ZERO) throw new Error("Invalid rand specified");
 
         const r = Fn.create(BASE.multiply(k).x),
             s = Fn.add(Fn.mul(r, d), Fn.mul(k, prepareHash(digest)));
@@ -220,8 +199,8 @@ export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
 
     const uv2xy = (point: AffinePoint<bigint>): AffinePoint<bigint> => {
         const [s, t] = computeST();
-        const s1v = Fp.mul(s, Fp.add(1n, point.y)),
-            _1v = Fp.sub(1n, point.y);
+        const s1v = Fp.mul(s, Fp.add(Fp.ONE, point.y)),
+            _1v = Fp.sub(Fp.ONE, point.y);
 
         return {
             x: Fp.add(t, Fp.div(s1v, _1v)),

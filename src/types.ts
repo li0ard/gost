@@ -82,10 +82,8 @@ export type SignOpts = {
 export type ECDSA = {
     /**
      * Computes public key for a secret key. Checks for validity of the secret key.
-     * @param isCompressed - whether to return compact (default), or full key
-     * @returns Public key, full when `isCompressed=false`; short when `isCompressed=true`
      */
-    getPublicKey: (secretKey: TArg<Uint8Array>, isCompressed?: boolean) => TRet<Uint8Array>;
+    getPublicKey: (secretKey: TArg<Uint8Array>) => TRet<Uint8Array>;
     /**
      * Signs a message hash with a secret key.
      * 
