@@ -23,13 +23,13 @@ export const kexp15 = (cipherEnc: Cipher, cipherMac: Cipher, iv: TArg<Uint8Array
         },
         unwrap: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
             abytes(msg, undefined, "msg");
-            const keymac = ctr(cipherEnc, iv).crypt(msg);
-            const key = keymac.slice(0, -cipherEnc.blockSize)
-            const mac = _mac(cipherMac).compute(concatBytes(iv, key));
+            const keymac = ctr(cipherEnc, iv).crypt(msg),
+                key = keymac.subarray(0, -cipherEnc.blockSize),
+                mac = _mac(cipherMac).compute(concatBytes(iv, key));
             if(!equalBytes(keymac.subarray(-cipherEnc.blockSize), mac))
                 throw new Error("Invalid key MAC");
 
-            return key;
+            return key as TRet<Uint8Array>;
         }
     });
 }
@@ -51,26 +51,25 @@ export const kwp = (
         wrap: (ukm: TArg<Uint8Array>, cek: TArg<Uint8Array>): TRet<Uint8Array> => {
             abytes(ukm, undefined, "ukm");
             abytes(cek, undefined, "cek");
-            const cipher = new MagmaLegacy(isCryptoPro ? cp_kek_diversify(kek, ukm, sbox) : kek, sbox);
-            const cek_mac = mac_legacy(cipher, ukm).compute(cek).subarray(0,4);
-            const cek_enc = ecb(cipher).encrypt(cek);
+            const cipher = new MagmaLegacy(isCryptoPro ? cp_kek_diversify(kek, ukm, sbox) : kek, sbox),
+                mac = mac_legacy(cipher, ukm).compute(cek).subarray(0,4);
 
-            return concatBytes(ukm, cek_enc, cek_mac);
+            return concatBytes(ukm, ecb(cipher).encrypt(cek), mac);
         },
         unwrap: (wrapped: TArg<Uint8Array>) => {
             abytes(wrapped, undefined, "wrapped");
             if(wrapped.length !== 44 && wrapped.length !== 76)
                 throw new Error("Invalid data length");
 
-            const [ukm, cek_enc, cek_mac] = [wrapped.subarray(0, 8), wrapped.subarray(8, wrapped.length-4), wrapped.subarray(-4)];
-            const cipher = new MagmaLegacy(isCryptoPro ? cp_kek_diversify(kek, ukm, sbox) : kek, sbox);
-            const cek = ecb(cipher).decrypt(cek_enc);
+            const ukm = wrapped.subarray(0,8),
+                cipher = new MagmaLegacy(isCryptoPro ? cp_kek_diversify(kek, ukm, sbox) : kek, sbox),
+                dec = ecb(cipher).decrypt(wrapped.subarray(8, -4));
 
-            const mac_computed = mac_legacy(cipher, ukm).compute(cek).subarray(0,4);
-            if(!equalBytes(cek_mac, mac_computed))
+            const mac_computed = mac_legacy(cipher, ukm).compute(dec).subarray(0,4);
+            if(!equalBytes(wrapped.subarray(-4), mac_computed))
                 throw new Error("Invalid MAC");
 
-            return cek;
+            return dec;
         }
     });
 }

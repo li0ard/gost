@@ -1,4 +1,4 @@
-import { type TArg, type TRet, bytesToNumberLE, concatBytes, copyBytes, numberToBytesLE } from "@noble/curves/utils.js";
+import { type TArg, type TRet, copyBytes, createView } from "@noble/hashes/utils.js";
 import { MagmaLegacy } from "../magma/index.js";
 import { cfb } from "./cfb.js";
 import type { Cipher, CipherOrHashFunctionWrapper } from "../types.js";
@@ -9,16 +9,18 @@ export const cp_kek_diversify = (
     ukm: TArg<Uint8Array>,
     sbox?: TArg<Uint8Array>
 ): TRet<Uint8Array> => {
-    const out = copyBytes(kek);
+    const out = copyBytes(kek), outView = createView(out),
+        iv = new Uint8Array(8), ivView = createView(iv);
     for (let i = 0; i < 8; i++) {
         let s1 = 0, s2 = 0;
         for (let j = 0; j < 8; j++) {
-            const k = Number(bytesToNumberLE(out.subarray(j*4, j*4+4)));
+            const k = outView.getUint32(j*4, true);
             if ((ukm[i] >> j) & 1) s1 += k;
             else s2 += k;
         }
 
-        const iv = concatBytes(numberToBytesLE(s1 >>> 0, 4), numberToBytesLE(s2 >>> 0, 4));
+        ivView.setUint32(0, s1, true);
+        ivView.setUint32(4, s2, true);
         out.set(cfb(new MagmaLegacy(out, sbox), iv).encrypt(out));
     }
 

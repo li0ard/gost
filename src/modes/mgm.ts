@@ -1,7 +1,8 @@
-import { abytes, concatBytes, copyBytes, type TArg, type TRet, bytesToNumberBE, equalBytes, numberToBytesBE, anumber } from "@noble/curves/utils.js";
+import { abytes, copyBytes, type TArg, type TRet, equalBytes, anumber } from "@noble/curves/utils.js";
 import type { AEADMode, Cipher } from "../types.js";
-import { pad1, xorBytes, xorBytesInPlace } from "../utils.js";
+import { _2_32, xorBytesInPlace } from "../utils.js";
 import { gf64Multiply, gf128Multiply } from "../gf/index.js"; 
+import { createView } from "@noble/hashes/utils.js";
 
 /**
  * **EN:** Multilinear Galois (MGM) mode (AEAD)
@@ -23,10 +24,22 @@ export const mgm = (cipher: Cipher, nonce: TArg<Uint8Array>, tagSize = cipher.bl
         mul = cipher.blockSize === 8 ? gf64Multiply : gf128Multiply,
         maxSize = (1n << BigInt(bs * 4)) - 1n;
 
-    const _incr = (data: TArg<Uint8Array>): TRet<Uint8Array> =>
-        numberToBytesBE(bytesToNumberBE(data) + 1n, halfbs),
-        incr_r = (data: TArg<Uint8Array>) => data.set(_incr(data.subarray(halfbs)), halfbs),
-        incr_l = (data: TArg<Uint8Array>) => data.set(_incr(data.subarray(0, halfbs)));
+    const incr = (view: DataView, off: number = 0) => {
+        const low = off + halfbs - 4,
+            value = (view.getUint32(low) + 1) >>> 0;
+        view.setUint32(low, value);
+        if (value === 0 && halfbs > 4)
+            view.setUint32(low - 4, (view.getUint32(low - 4) + 1) >>> 0);
+    }
+
+    const putBits = (view: DataView, off: number, bytes: number) => {
+        const bits = bytes * 8;
+        if (bits >= 2 ** (8 * halfbs)) 
+            throw new Error("Data length is too big");
+        view.setUint32(off + halfbs - 4, bits >>> 0);
+        if (halfbs > 4)
+            view.setUint32(off, Math.floor(bits / _2_32));
+    }
 
     const validateSizes = (plaintext: TArg<Uint8Array>, aad: TArg<Uint8Array>) => {
         if (plaintext.length === 0 && aad.length === 0)
@@ -35,36 +48,41 @@ export const mgm = (cipher: Cipher, nonce: TArg<Uint8Array>, tagSize = cipher.bl
             throw new Error("plaintext + additional data are too big");
     }
 
-    const crypt = (icn: TArg<Uint8Array>, data: TArg<Uint8Array>): TRet<Uint8Array> => {
+    const crypt = (icn: TArg<Uint8Array>, data: TArg<Uint8Array>) => {
         icn[0] &= 0x7F;
-        const enc = cipher.encrypt(icn), out = new Uint8Array(data.length);
+        const enc = cipher.encrypt(icn), view = createView(enc);
         for (let offset = 0; offset < data.length; offset += bs) {
-            out.set(xorBytes(
-                cipher.encrypt(enc),
-                data.subarray(offset, offset + bs)
-            ), offset);
-            incr_r(enc);
+            xorBytesInPlace(data.subarray(offset, offset + bs), cipher.encrypt(enc));
+            incr(view, halfbs);
         }
-
-        return out;
     }
 
     const auth = (icn: TArg<Uint8Array>, text: TArg<Uint8Array>, aad: TArg<Uint8Array>): TRet<Uint8Array> => {
         icn[0] |= 0x80;
-        const enc = cipher.encrypt(icn), sum = new Uint8Array(bs);
-        const updateSum = (data: TArg<Uint8Array>) => {
-            xorBytesInPlace(sum, mul(cipher.encrypt(enc), data));
-            incr_l(enc);
+        const enc = cipher.encrypt(icn), encView = createView(enc),
+            sum = new Uint8Array(bs);
+        const updateSum = (block: TArg<Uint8Array>) => {
+            xorBytesInPlace(sum, mul(cipher.encrypt(enc), block));
+            incr(encView);
         }
-        for (let offset = 0; offset < aad.length; offset += bs)
-            updateSum(pad1(aad.subarray(offset, offset + bs), bs));
-        for (let offset = 0; offset < text.length; offset += bs)
-            updateSum(pad1(text.subarray(offset, offset + bs), bs));
+        const absorb = (data: TArg<Uint8Array>) => {
+            for (let offset = 0; offset < data.length; offset += bs) {
+                const chunk: Uint8Array = data.subarray(offset, offset + bs);
+                if (chunk.length === bs) updateSum(chunk);
+                else {
+                    const padded = new Uint8Array(bs);
+                    padded.set(chunk);
+                    updateSum(padded);
+                }
+            }
+        }
+        absorb(aad);
+        absorb(text);
 
-        xorBytesInPlace(sum, mul(cipher.encrypt(enc), concatBytes(
-            numberToBytesBE(BigInt(aad.length) * 8n, halfbs),
-            numberToBytesBE(BigInt(text.length) * 8n, halfbs),
-        )));
+        const lengths = new Uint8Array(bs), lengthsView = createView(lengths);
+        putBits(lengthsView, 0, aad.length);
+        putBits(lengthsView, halfbs, text.length);
+        xorBytesInPlace(sum, mul(cipher.encrypt(enc), lengths));
 
         return cipher.encrypt(sum).subarray(0, tagSize) as TRet<Uint8Array>;
     }
@@ -75,8 +93,13 @@ export const mgm = (cipher: Cipher, nonce: TArg<Uint8Array>, tagSize = cipher.bl
             abytes(aad, undefined, "aad");
             validateSizes(plaintext, aad);
             const icn = copyBytes(nonce),
-                ciphertext = crypt(icn, plaintext);
-            return concatBytes(ciphertext, auth(icn, ciphertext, aad));
+                out = new Uint8Array(plaintext.length + tagSize),
+                ciphertext = out.subarray(0, plaintext.length);
+            ciphertext.set(plaintext);
+            crypt(icn, ciphertext);
+            out.set(auth(icn, ciphertext, aad), plaintext.length);
+
+            return out;
         },
         open: (ciphertext: TArg<Uint8Array>, aad: TArg<Uint8Array> = new Uint8Array()): TRet<Uint8Array> => {
             abytes(ciphertext, undefined, "ciphertext");
@@ -90,7 +113,10 @@ export const mgm = (cipher: Cipher, nonce: TArg<Uint8Array>, tagSize = cipher.bl
             if (!equalBytes(ciphertext.subarray(-tagSize), tag))
                 throw new Error("Invalid authentication tag");
 
-            return crypt(icn, ct);
+            const plaintext = copyBytes(ct);
+            crypt(icn, plaintext);
+
+            return plaintext;
         }
     });
 }

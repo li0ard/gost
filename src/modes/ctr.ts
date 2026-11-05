@@ -1,8 +1,7 @@
-import { numberToBytesBE, concatBytes, type TArg, type TRet } from "@noble/curves/utils.js";
+import { abool, abytes, createView , type TArg, type TRet, copyBytes } from "@noble/hashes/utils.js";
 import type { Cipher, CipherCtor, StreamMode } from "../types.js";
-import { xorBytes } from "../utils.js";
+import { xorBytesInPlace, _2_32 } from "../utils.js";
 import { acpkm } from "./_keytransform.js";
-import { abool, abytes, createView } from "@noble/hashes/utils.js";
 
 const C1 = 0x01010104, C2 = 0x01010101;
 
@@ -24,26 +23,33 @@ export const ctr = (
     const ctrMax = 1n << (8n * BigInt(halfBlockSize)),
         maxSize = ctrMax * BigInt(cipher.blockSize),
         acpkmSectionSize = _isAcpkmOmac
-        ? (cipher.blockSize === 16 ? 6 : 10)
-        : 2,
+            ? (cipher.blockSize === 16 ? 6 : 10)
+            : 2,
         CipherCtor = cipher.constructor as CipherCtor;
 
     return Object.freeze({
         crypt: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
             abytes(msg, undefined, "msg");
-            let encrypter = cipher.encrypt.bind(cipher);
             if (BigInt(msg.length) > maxSize) throw new Error("Too big data");
 
-            const out = new Uint8Array(msg.length);
-            for (let ctr = 0; ctr < Math.ceil(msg.length / cipher.blockSize); ctr++) {
-                if (isAcpkm && ctr !== 0 && ctr % acpkmSectionSize === 0) {
+            let encrypter = cipher.encrypt.bind(cipher);
+            const out = copyBytes(msg),
+                block = new Uint8Array(cipher.blockSize),
+                blockView = createView(block);
+            block.set(iv);
+
+            for (let i = 0; i < Math.ceil(msg.length / cipher.blockSize); i++) {
+                if (isAcpkm && i !== 0 && i % acpkmSectionSize === 0) {
                     const cipher2 = new CipherCtor(acpkm(encrypter, cipher.blockSize));
                     encrypter = cipher2.encrypt.bind(cipher2);
                 }
 
-                const gamma = encrypter(concatBytes(iv, numberToBytesBE(ctr, halfBlockSize)));
-                const offset = ctr * cipher.blockSize;
-                out.set(xorBytes(msg.subarray(offset, offset + cipher.blockSize), gamma), offset);
+                blockView.setUint32(cipher.blockSize - 4, i >>> 0);
+                if (halfBlockSize > 4)
+                    blockView.setUint32(cipher.blockSize - 8, Math.floor(i / _2_32));
+
+                const offset = i * cipher.blockSize;
+                xorBytesInPlace(out.subarray(offset, offset + cipher.blockSize), encrypter(block));
             }
 
             return out;
@@ -59,8 +65,7 @@ export const ctr = (
 export const cnt = (cipher: Cipher, iv: TArg<Uint8Array>): StreamMode => {
     abytes(iv, cipher.blockSize, "iv");
 
-    const incrementCounter = (ctr: TArg<Uint8Array>) => {
-        const view = createView(ctr);
+    const incrementCounter = (view: DataView) => {
         view.setUint32(0, (view.getUint32(0, true) + C2) >>> 0, true);
         let s2 = view.getUint32(4, true) + C1;
         if (s2 >= 0xFFFFFFFF) s2 -= 0xFFFFFFFF;
@@ -70,12 +75,11 @@ export const cnt = (cipher: Cipher, iv: TArg<Uint8Array>): StreamMode => {
     return Object.freeze({
         crypt: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
             abytes(msg, undefined, "msg");
-            const ctr = cipher.encrypt(iv),
-                output = new Uint8Array(msg.length);
+            const ctr = cipher.encrypt(iv), ctrView = createView(ctr),
+                output = copyBytes(msg);
             for (let i = 0; i < msg.length; i += cipher.blockSize) {
-                incrementCounter(ctr);
-                const ct = xorBytes(msg.subarray(i, i + cipher.blockSize), cipher.encrypt(ctr));
-                output.set(ct, i);
+                incrementCounter(ctrView);
+                xorBytesInPlace(output.subarray(i, i + cipher.blockSize), cipher.encrypt(ctr));
             }
 
             return output;

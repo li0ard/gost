@@ -120,6 +120,7 @@ export class _Gost341194 extends HashMD<_Gost341194> {
         _step(this.h, BLOCK, this.sbox, this.h);
     }
 
+    // Unused
     protected get(): number[] { return []; }
     protected set(...args: number[]) {}
 

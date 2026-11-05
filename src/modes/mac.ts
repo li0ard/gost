@@ -1,6 +1,6 @@
-import { abytes, bytesToNumberLE, numberToBytesLE, concatBytes, type TArg, type TRet } from "@noble/curves/utils.js";
+import { abytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import type { Cipher, CipherCtor, MACMode } from "../types.js";
-import { pad1, pad3, xorBytes } from "../utils.js";
+import { xorBytesInPlace } from "../utils.js";
 import { magmaKeySequences, Magma } from "../magma/index.js";
 import { acpkm_master } from "./_keytransform.js";
 
@@ -37,26 +37,26 @@ export const mac = (cipher: Cipher): MACMode => {
     return Object.freeze({
         compute: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
             abytes(msg, undefined, "msg");
-            const n = Math.ceil(msg.length / bs) || 1;
-            const lastBlockIsFull = msg.length > 0 && msg.length % bs === 0;
-            const tailOffset = (n - 1) * bs;
+            const n = Math.ceil(msg.length / bs) || 1,
+                tailOffset = (n - 1) * bs;
 
             let prev = new Uint8Array(bs);
-            for (let i = 0; i < tailOffset; i += bs)
-                prev = cipher.encrypt(xorBytes(prev, msg.subarray(i, i + bs)));
-
-            let lastBlock;
-            if (lastBlockIsFull)
-                lastBlock = xorBytes(msg.subarray(tailOffset, tailOffset + bs), K1);
-            else {
-                const tail = msg.subarray(tailOffset);
-                const padded = new Uint8Array(bs);
-                padded.set(tail);
-                padded[tail.length] = 0x80;
-                lastBlock = xorBytes(padded, K2);
+            for (let i = 0; i < tailOffset; i += bs) {
+                xorBytesInPlace(prev, msg, i);
+                prev = cipher.encrypt(prev);
             }
 
-            return cipher.encrypt(xorBytes(prev, lastBlock));
+            if (msg.length > 0 && msg.length % bs === 0) {
+                xorBytesInPlace(prev, msg, tailOffset);
+                xorBytesInPlace(prev, K1);
+            } else {
+                const tailLength = msg.length - tailOffset;
+                xorBytesInPlace(prev.subarray(0, tailLength), msg, tailOffset);
+                prev[tailLength] ^= 0x80;
+                xorBytesInPlace(prev, K2);
+            }
+
+            return cipher.encrypt(prev);
         }
     });
 }
@@ -71,28 +71,35 @@ export const mac_legacy = (
     iv: TArg<Uint8Array> = new Uint8Array(cipher.blockSize)
 ): MACMode => {
     abytes(iv, undefined, "iv");
+    const half = cipher.blockSize / 2;
+
     return Object.freeze({
         compute: (msg: TArg<Uint8Array>): TRet<Uint8Array> => {
             abytes(msg, undefined, "msg");
-            const paddedData = pad1(msg, cipher.blockSize);
+            const feedback = new Uint8Array(cipher.blockSize),
+                block = new Uint8Array(cipher.blockSize);
+            feedback.set(iv.subarray(0, cipher.blockSize));
 
-            let prev0 = bytesToNumberLE(iv.subarray(4, 8)),
-                prev1 = bytesToNumberLE(iv.subarray(0, 4));
-            const feedback = new Uint8Array(cipher.blockSize);
-            for (let i = 0; i < paddedData.length; i += cipher.blockSize) {
-                feedback.set(numberToBytesLE(prev1, 4));
-                feedback.set(numberToBytesLE(prev0, 4), 4);
-
-                const out = cipher.proceedBlock(
-                    xorBytes(paddedData.subarray(i, i + cipher.blockSize), feedback),
-                    magmaKeySequences.MAC
-                );
-
-                prev0 = bytesToNumberLE(out.subarray(0, 4));
-                prev1 = bytesToNumberLE(out.subarray(4, 8));
+            const step = () => {
+                const out = cipher.proceedBlock(block, magmaKeySequences.MAC);
+                feedback.set(out.subarray(half));
+                feedback.set(out.subarray(0, half), half);
             }
 
-            return concatBytes(numberToBytesLE(prev1, 4), numberToBytesLE(prev0, 4));
+            const tailOffset = msg.length - (msg.length % cipher.blockSize);
+            for (let i = 0; i < tailOffset; i += cipher.blockSize) {
+                block.set(feedback);
+                xorBytesInPlace(block, msg, i);
+                step();
+            }
+
+            if (msg.length % cipher.blockSize !== 0 || msg.length === 0) {
+                block.set(feedback);
+                xorBytesInPlace(block.subarray(0, msg.length - tailOffset), msg, tailOffset);
+                step();
+            }
+
+            return feedback;
         }
     });
 }
@@ -116,14 +123,12 @@ export const omac_acpkm = (cipher: Cipher): MACMode => {
                 ? msg.length - bs
                 : msg.length - (msg.length % bs);
 
-            let sections = Math.floor(msg.length / sectionSize);
-            if (msg.length % sectionSize !== 0) sections += 1;
-            if (sections === 0) sections = 1;
+            const sections = Math.ceil(msg.length / sectionSize) || 1;
 
-            let keymats: Uint8Array = acpkm_master(cipher, keymatSize * sections);
-            let encrypter = cipher.encrypt.bind(cipher);
-            let k1: Uint8Array = new Uint8Array(bs);
-            let rotated = false;
+            let keymats: Uint8Array = acpkm_master(cipher, keymatSize * sections),
+                encrypter = cipher.encrypt.bind(cipher),
+                k1: Uint8Array = new Uint8Array(bs),
+                rotated = false;
 
             const rotateKey = () => {
                 const key = keymats.subarray(0, ACPKM_MASTER_KEYSIZE);
@@ -138,19 +143,24 @@ export const omac_acpkm = (cipher: Cipher): MACMode => {
             let prev = new Uint8Array(bs);
             for (let i = 0; i < tailOffset; i += bs) {
                 if (i % sectionSize === 0) rotateKey();
-                prev = encrypter(xorBytes(msg.subarray(i, i + bs), prev));
+                xorBytesInPlace(prev, msg, i);
+                prev = encrypter(prev);
             }
 
             const tail = msg.subarray(tailOffset);
             if (tail.length === bs) rotateKey();
             if (!rotated) rotateKey();
 
-            const k2 = gfDouble(k1, Rb);
+            if (tail.length === bs) {
+                xorBytesInPlace(prev, tail);
+                xorBytesInPlace(prev, k1);
+            } else {
+                xorBytesInPlace(prev.subarray(0, tail.length), tail);
+                prev[tail.length] ^= 0x80;
+                xorBytesInPlace(prev, gfDouble(k1, Rb));
+            }
 
-            return encrypter(xorBytes(
-                xorBytes(pad3(tail, bs), prev),
-                tail.length === bs ? k1 : k2
-            ));
+            return encrypter(prev);
         }
     });
 }
