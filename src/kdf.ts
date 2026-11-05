@@ -1,4 +1,4 @@
-import { Streebog256HMAC } from "./hmac.js";
+import { streebog256hmac } from "./hmac.js";
 import { numberToBytesBE, type TArg, type TRet } from "@noble/curves/utils.js";
 import { pbkdf2 } from "@noble/hashes/pbkdf2.js";
 import { streebog256, streebog512 } from "./streebog/index.js";
@@ -23,7 +23,7 @@ export const kdf_gostr3411_2012_256 = (
     key: TArg<Uint8Array>,
     label: TArg<Uint8Array>,
     seed: TArg<Uint8Array>
-): TRet<Uint8Array> => new Streebog256HMAC(key)
+): TRet<Uint8Array> => streebog256hmac.create(key)
     .update(_1).update(label).update(_0)
     .update(seed).update(_256)
     .digest();
@@ -48,7 +48,7 @@ export const kdf_tree_gostr3411_2012_256 = (
     const keymat = [];
     const length = numberToBytesBE(keys * 32 * 8, 2);
 
-    for(let i = 0; i < keys; i++) keymat.push(new Streebog256HMAC(key)
+    for(let i = 0; i < keys; i++) keymat.push(streebog256hmac.create(key)
         .update(numberToBytesBE(i + 1, i_len))
         .update(label).update(_0)
         .update(seed).update(length)
@@ -137,7 +137,8 @@ export const cpkdf = (
     password: TArg<KDFInput>,
     salt: TArg<KDFInput>
 ): TRet<Uint8Array> => {
-    const hasher = streebog256.create(), bs = streebog256.blockLen;
+    let hasher = streebog256.create();
+    const bs = streebog256.blockLen;
     const p = kdfInputToBytes(password), s = kdfInputToBytes(salt);
     if(password.length > 256)
         throw new Error("Password cannot be longer than 256 symbols");
@@ -148,6 +149,7 @@ export const cpkdf = (
     hasher.update(s);
     if(password.length !== 0) hasher.update(pin);
     const hash = hasher.digest();
+    hasher = streebog256.create();
 
     const c = new Uint8Array(bs);
     c.set(new TextEncoder().encode("DENEFH028.760246785.IUEFHWUIO.EF"));
@@ -157,6 +159,7 @@ export const cpkdf = (
         m1.set(xorBytes(c, _5C));
         hasher.update(m0).update(hash).update(m1).update(hash);
         c.set(hasher.digest());
+        hasher = streebog256.create()
         c.fill(0, 32);
     }
 
@@ -164,7 +167,10 @@ export const cpkdf = (
     m1.set(xorBytes(c, _5C));
     hasher.update(m0.subarray(0, 32)).update(s).update(m1.subarray(0, 32));
     if(password.length !== 0) hasher.update(pin);
-    hasher.update(hasher.digest());
+
+    const hash2 = hasher.digest();
+    hasher = streebog256.create();
+    hasher.update(hash2);
 
     return hasher.digest();
 }
