@@ -2,9 +2,10 @@
  * Implementation of GOST R 34.11-2012 ([RFC 6986](https://datatracker.ietf.org/doc/html/rfc6986.html)) "Streebog" hash function
  * @module
  */
-import { abool, abytes, aoutput, clean, createHasher, createView, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { aexists, aoutput, clean, createHasher, createView, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { A, C } from "./const.js";
 import { PI } from "../kuznyechik/const.js";
+import { HashMD } from "@noble/hashes/_md.js";
 
 // Precompute Substitution+ Permutation + Linear transformations
 let T: Uint32Array | undefined;
@@ -101,99 +102,63 @@ const loadBlock = (v: DataView, off: number, out: TArg<Uint32Array>) => {
 }
 
 /** Streebog (GOST R 34.11-2012) hash function */
-abstract class Streebog<T extends Streebog<T>> implements Hash<Streebog<T>> {
-    readonly blockLen = 64;
-    readonly outputLen: number;
-    readonly canXOF = false;
-    protected buffer = new Uint8Array(this.blockLen);
-    protected bufView = createView(this.buffer);
-    protected pos = 0;
+abstract class Streebog<T extends Streebog<T>> extends HashMD<T> {
     protected hash = new Uint32Array(16);
     protected n = new Uint32Array(16);
     protected sigma = new Uint32Array(16);
 
-    /** Streebog (GOST R 34.11-2012) hash function */
-    constructor(private is512: boolean) {
-        abool(is512);
-        this.outputLen = is512 ? 64 : 32;
+    constructor(is512: boolean) {
+        super(64, is512 ? 64 : 32, 0, true);
         this.hash.fill(is512 ? 0 : 0x01010101);
     }
 
-    destroy() {
-        clean(this.buffer, this.n, this.sigma);
-        this.hash.fill(this.is512 ? 0 : 0x01010101);
-        this.pos = 0;
-    }
-
-    protected _copyState(to: T): T {
-        to.buffer.set(this.buffer);
-        to.pos = this.pos;
-        to.hash.set(this.hash);
-        to.n.set(this.n);
-        to.sigma.set(this.sigma);
-        return to;
-    }
-
-    abstract _cloneInto(to?: Streebog<T>): Streebog<T>;
-    abstract clone(): Streebog<T>;
-
-    private processBlock(v: DataView, off: number) {
-        loadBlock(v, off, M);
+    protected process(view: DataView, off: number) {
+        loadBlock(view, off, M);
         G(this.hash, this.n, M);
         addNum(this.n, 512);
         add512(this.sigma, M);
     }
 
-    update(data: TArg<Uint8Array>): this {
-        abytes(data);
-        const view = createView(data);
-        let offset = 0;
-        if (this.pos > 0) {
-            const take = Math.min(this.blockLen - this.pos, data.length);
-            this.buffer.set(data.subarray(0, take), this.pos);
-            this.pos += take;
-            offset = take;
-            if (this.pos === this.blockLen) {
-                this.processBlock(this.bufView, 0);
-                this.pos = 0;
-            }
-        }
+    // Unused
+    protected get(): number[] { return []; }
+    protected set(...args: number[]) {}
 
-        for (; offset + this.blockLen <= data.length; offset += this.blockLen)
-            this.processBlock(view, offset);
-
-        if (offset < data.length) {
-            this.buffer.set(data.subarray(offset));
-            this.pos = data.length - offset;
-        }
-
-        return this;
+    protected roundClean() {
+        clean(K, S, X, Y, M);
     }
 
-    digest(): TRet<Uint8Array> {
-        const out = new Uint8Array(this.outputLen);
-        this.digestInto(out);
-        return out;
-    }
-
-    digestInto(buf: TArg<Uint8Array>) {
-        aoutput(buf, this);
+    override digestInto(out: TArg<Uint8Array>) {
+        aexists(this);
+        aoutput(out, this);
+        this.finished = true;
         this.buffer.fill(0, this.pos);
         this.buffer[this.pos] = 1;
-        loadBlock(this.bufView, 0, M);
 
+        loadBlock(this.view, 0, M);
         G(this.hash, this.n, M);
         addNum(this.n, this.pos * 8);
         add512(this.sigma, M);
         G(this.hash, null, this.n);
         G(this.hash, null, this.sigma);
+        this.roundClean();
 
-        const out = createView(buf);
-        const words = this.outputLen >> 2;
-        for (let i = 0; i < words; i++)
-            out.setUint32(this.outputLen - 4 - (i << 2), this.hash[i], true);
+        const oview = out === this.buffer ? this.view : createView(out);
+        for (let i = 0; i < (this.outputLen >> 2); i++)
+            oview.setUint32(this.outputLen - 4 - (i << 2), this.hash[i], true);
+    }
 
-        this.destroy();
+    destroy() {
+        this.destroyed = true;
+        clean(this.buffer, this.hash, this.n, this.sigma);
+    }
+
+    protected _copyState(to: T): T {
+        this._cloneIntoMeta(to);
+        to.hash.set(this.hash);
+        to.n.set(this.n);
+        to.sigma.set(this.sigma);
+
+        return to;
     }
 }
 
@@ -202,13 +167,9 @@ export class _Streebog256 extends Streebog<_Streebog256> {
     /** Streebog-256 (GOST R 34.11-2012) hash function */
     constructor() { super(false); }
 
-    /** Create hash instance */
-    static create(): _Streebog256 { return new _Streebog256(); }
-
     _cloneInto(to?: _Streebog256): _Streebog256 {
         return this._copyState(to ||= new _Streebog256());
     }
-    clone(): _Streebog256 { return this._cloneInto(); }
 }
 
 /** Internal Streebog-512 hash class*/
@@ -216,13 +177,9 @@ export class _Streebog512 extends Streebog<_Streebog512> {
     /** Streebog-512 (GOST R 34.11-2012) hash function */
     constructor() { super(true); }
 
-    /** Create hash instance */
-    static create(): _Streebog512 { return new _Streebog512(); }
-
     _cloneInto(to?: _Streebog512): _Streebog512 {
         return this._copyState(to ||= new _Streebog512());
     }
-    clone(): _Streebog512 { return this._cloneInto(); }
 }
 
 /**
@@ -238,7 +195,12 @@ export class _Streebog512 extends Streebog<_Streebog512> {
  * streebog256.create().update(new Uint8Array([97, 98, 99])).digest();
  * ```
  */
-export const streebog256 = /* @__PURE__ */ createHasher(_Streebog256.create);
+export const streebog256 = /* @__PURE__ */ createHasher(
+    () => new _Streebog256(),
+    {
+        oid: Uint8Array.from([0x06, 0x08, 0x2A, 0x85, 0x03, 0x07, 0x01, 0x01, 0x02, 0x02])
+    }
+);
 /**
  * Streebog-512 hash function
  * 
@@ -252,4 +214,9 @@ export const streebog256 = /* @__PURE__ */ createHasher(_Streebog256.create);
  * streebog512.create().update(new Uint8Array([97, 98, 99])).digest();
  * ```
  */
-export const streebog512 = /* @__PURE__ */ createHasher(_Streebog512.create);
+export const streebog512 = /* @__PURE__ */ createHasher(
+    () => new _Streebog512(),
+    {
+        oid: Uint8Array.from([0x06, 0x08, 0x2A, 0x85, 0x03, 0x07, 0x01, 0x01, 0x02, 0x03])
+    }
+);

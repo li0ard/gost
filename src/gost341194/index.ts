@@ -2,7 +2,8 @@
  * Implementation of GOST R 34.11-94 ([RFC 5831](https://datatracker.ietf.org/doc/html/rfc5831.html)) hash function
  * @module
  */
-import { abytes, aoutput, clean, createHasher, type Hash, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { abytes, aexists, aoutput, clean, createHasher, type TArg } from "@noble/hashes/utils.js";
+import { HashMD } from "@noble/hashes/_md.js";
 import { MagmaLegacy } from "../magma/index.js";
 import { GOSTR_3411_94_CRYPTOPRO_PARAM_SET } from "../magma/const.js";
 import { numberToBytesBE } from "@noble/curves/utils.js";
@@ -50,15 +51,6 @@ const encrypt = (cipher: MagmaLegacy, plaintext: TArg<Uint8Array>, offset: numbe
     for (let i = 0; i < 8; i++) X[offset + i] = e[7 - i];
 }
 
-const addLE = (acc: TArg<Uint8Array>, block: TArg<Uint8Array>) => {
-    let c = 0;
-    for (let i = 0; i < 32; i++) {
-        const s = acc[i] + block[i] + c;
-        acc[i] = s;
-        c = s >> 8;
-    }
-}
-
 const _step = (
     hin: TArg<Uint8Array>,
     m: TArg<Uint8Array>,
@@ -104,96 +96,66 @@ const _step = (
 }
 
 /** Internal GOST R 34.11-94 hash class */
-export class _Gost341194 implements Hash<_Gost341194> {
-    readonly blockLen = 32;
-    readonly outputLen = 32;
-    readonly canXOF = false;
-    private buffer = new Uint8Array(32);
-    private pos = 0;
+export class _Gost341194 extends HashMD<_Gost341194> {
     private h = new Uint8Array(32);
-    private len = 0n;
     private checksum = new Uint8Array(32);
 
     /** GOST R 34.11-94 hash function */
     constructor(
         private sbox: TArg<Uint8Array> = GOSTR_3411_94_CRYPTOPRO_PARAM_SET
     ) {
+        super(32, 32, 0, true);
         abytes(sbox, 64, "sbox");
     }
 
-    /** Create hash instance */
-    static create(): _Gost341194 { return new _Gost341194(); }
-
-    destroy() {
-        clean(this.buffer, this.h, this.checksum);
-        this.pos = 0;
-        this.len = 0n;
+    protected process(view: DataView, offset: number) {
+        let c = 0;
+        for (let i = 0; i < 32; i++) {
+            const b = view.getUint8(offset + i),
+                s = this.checksum[i] + b + c;
+            this.checksum[i] = s;
+            c = s >> 8;
+            BLOCK[31 - i] = b;
+        }
+        _step(this.h, BLOCK, this.sbox, this.h);
     }
 
-    clone(): _Gost341194 { return this._cloneInto(); }
+    protected get(): number[] { return []; }
+    protected set(...args: number[]) {}
+
+    protected roundClean() {
+        clean(U, V, W, X, KEY, BLOCK, TMP, CT);
+    }
+
+    override digestInto(out: TArg<Uint8Array>) {
+        aexists(this);
+        aoutput(out, this);
+        this.finished = true;
+        if (this.pos > 0) {
+            this.buffer.fill(0, this.pos);
+            this.process(this.view, 0);
+        }
+
+        _step(this.h, numberToBytesBE(BigInt(this.length) * 8n, 32), this.sbox, this.h);
+        for (let i = 0; i < 32; i++) BLOCK[i] = this.checksum[31 - i];
+        _step(this.h, BLOCK, this.sbox, this.h);
+        for (let i = 0; i < 32; i++) out[i] = this.h[31 - i];
+        this.roundClean();
+    }
+
+    destroy() {
+        this.destroyed = true;
+        clean(this.buffer, this.h, this.checksum);
+    }
+
     _cloneInto(to?: _Gost341194): _Gost341194 {
         to ||= new _Gost341194(this.sbox);
+        this._cloneIntoMeta(to);
         to.sbox = this.sbox;
-        to.buffer.set(this.buffer);
-        to.pos = this.pos;
         to.h.set(this.h);
-        to.len = this.len;
         to.checksum.set(this.checksum);
 
         return to;
-    }
-
-    private processBlock(block: TArg<Uint8Array>, bits: bigint = 256n) {
-        this.len += bits;
-        addLE(this.checksum, block);
-        for (let i = 0; i < 32; i++) BLOCK[i] = block[31 - i];
-        _step(this.h, BLOCK, this.sbox, this.h);
-    }
-
-    update(data: TArg<Uint8Array>): this {
-        abytes(data);
-        let offset = 0;
-        if (this.pos > 0) {
-            const take = Math.min(this.blockLen - this.pos, data.length);
-            this.buffer.set(data.subarray(0, take), this.pos);
-            this.pos += take;
-            offset = take;
-            if (this.pos === this.blockLen) {
-                this.processBlock(this.buffer);
-                this.pos = 0;
-            }
-        }
-
-        for (; offset + this.blockLen <= data.length; offset += this.blockLen)
-            this.processBlock(data.subarray(offset, offset + this.blockLen));
-
-        if (offset < data.length) {
-            this.buffer.set(data.subarray(offset), 0);
-            this.pos = data.length - offset;
-        }
-
-        return this;
-    }
-
-    digestInto(buf: TArg<Uint8Array>) {
-        aoutput(buf, this);
-        if (this.pos > 0) {
-            this.buffer.fill(0, this.pos);
-            this.processBlock(this.buffer, BigInt(this.pos) * 8n);
-        }
-
-        _step(this.h, numberToBytesBE(this.len, this.blockLen), this.sbox, this.h);
-        for (let i = 0; i < 32; i++) BLOCK[i] = this.checksum[31 - i];
-        _step(this.h, BLOCK, this.sbox, this.h);
-        for (let i = 0; i < 32; i++) buf[i] = this.h[31 - i];
-        this.destroy();
-    }
-
-    digest(): TRet<Uint8Array> {
-        const out = new Uint8Array(this.outputLen);
-        this.digestInto(out);
-
-        return out;
     }
 }
 
@@ -210,4 +172,4 @@ export class _Gost341194 implements Hash<_Gost341194> {
  * gost341194.create().update(new Uint8Array([97, 98, 99])).digest();
  * ```
  */
-export const gost341194 = createHasher(_Gost341194.create);
+export const gost341194 = /* @__PURE__ */ createHasher(() => new _Gost341194());

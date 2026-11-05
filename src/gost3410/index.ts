@@ -36,7 +36,7 @@ import { reverseBytes } from "../utils.js";
 
 const swapHalves = (point: TArg<Uint8Array>): TRet<Uint8Array> => concatBytes(
     point.subarray(point.length / 2),
-    point.subarray(0, point.length / 2),
+    point.subarray(0, point.length / 2)
 );
 
 const reverseCoords = (point: TArg<Uint8Array>): TRet<Uint8Array> => {
@@ -46,14 +46,11 @@ const reverseCoords = (point: TArg<Uint8Array>): TRet<Uint8Array> => {
 
     return concatBytes(
         reverseBytes(point, 0, half),
-        reverseBytes(point, half),
+        reverseBytes(point, half)
     );
 }
 
 const _4 = Uint8Array.of(4);
-const cutSec1Prefix = (point: TArg<Uint8Array>, cut: boolean): TRet<Uint8Array> => (
-    cut ? point.subarray(1) : point
-) as TRet<Uint8Array>;
 
 /** Creates GOST R 34.10-2012 signing interface */
 export const gost3410 = (parameters: GostCurveParameters): ECDSA => {

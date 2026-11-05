@@ -1,15 +1,15 @@
 import { abytes, anumber, type TArg, type TRet } from "@noble/hashes/utils.js";
 
 export const xorBytes = (a: TArg<Uint8Array>, b: TArg<Uint8Array>): TRet<Uint8Array> => {
-    const mlen = Math.min(a.length, b.length);
-    const result = new Uint8Array(mlen);
+    const mlen = Math.min(a.length, b.length),
+        result = new Uint8Array(mlen);
     for(let i = 0; i < mlen; i++) result[i] = a[i] ^ b[i];
 
     return result;
 }
 
 export const xorBytesInPlace = (dst: TArg<Uint8Array>, src: TArg<Uint8Array>, off = 0) => {
-    if(dst.length > src.length) throw new Error("Uint8Array's must have same length or dst < src");
+    if (off + dst.length > src.length) throw new Error("src is too short");
     for(let i = 0; i < dst.length; i++) dst[i] ^= src[off + i];
 }
 
@@ -67,9 +67,9 @@ export const abytesAligned = (
     anumber(blockSize);
     if (value.length !== 0 && value.length % blockSize === 0) return value as TRet<Uint8Array>;
     
-    const ofLen = ` of length aligned to ${blockSize}`;
-    const got = `length=${value.length}`;
-    const message = atitle(title) + 'expected Uint8Array' + ofLen + ', got ' + got;
+    const ofLen = ` of length aligned to ${blockSize}`,
+        got = `length=${value.length}`,
+        message = atitle(title) + 'expected Uint8Array' + ofLen + ', got ' + got;
     throw new RangeError(message);
 }
 
