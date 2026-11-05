@@ -6,11 +6,11 @@ import { gost341194 } from "./gost341194/index.js";
 import { xorBytes } from "./utils.js";
 import { kdfInputToBytes, type KDFInput } from "@noble/hashes/utils.js";
 
-const _0 = new Uint8Array([0]);
-const _1 = new Uint8Array([1]);
-const _256 = new Uint8Array([1,0]);
-const _36 = new Uint8Array(64).fill(0x36);
-const _5C = new Uint8Array(64).fill(0x5C);
+const _0 = new Uint8Array([0]),
+    _1 = new Uint8Array([1]),
+    _256 = new Uint8Array([1,0]),
+    _36 = new Uint8Array(64).fill(0x36),
+    _5C = new Uint8Array(64).fill(0x5C);
 
 /**
  * Key derivation function `KDF_GOSTR3411_2012_256`
@@ -45,9 +45,8 @@ export const kdf_tree_gostr3411_2012_256 = (
     keys: number,
     i_len: number = 1
 ): TRet<Uint8Array>[] => {
-    const keymat = [];
-    const length = numberToBytesBE(keys * 32 * 8, 2);
-
+    const keymat = [],
+        length = numberToBytesBE(keys * 32 * 8, 2);
     for(let i = 0; i < keys; i++) keymat.push(streebog256hmac.create(key)
         .update(numberToBytesBE(i + 1, i_len))
         .update(label).update(_0)
@@ -137,11 +136,11 @@ export const cpkdf = (
     password: TArg<KDFInput>,
     salt: TArg<KDFInput>
 ): TRet<Uint8Array> => {
-    let hasher = streebog256.create();
-    const bs = streebog256.blockLen;
-    const p = kdfInputToBytes(password), s = kdfInputToBytes(salt);
     if(password.length > 256)
         throw new Error("Password cannot be longer than 256 symbols");
+    let hasher = streebog256.create();
+    const p = kdfInputToBytes(password),
+        s = kdfInputToBytes(salt);
 
     const pin = new Uint8Array(password.length * 4);
     for(let i = 0; i < password.length; i++) pin[i*4] = p[i];
@@ -151,9 +150,10 @@ export const cpkdf = (
     const hash = hasher.digest();
     hasher = streebog256.create();
 
-    const c = new Uint8Array(bs);
+    const c = new Uint8Array(streebog256.blockLen);
     c.set(new TextEncoder().encode("DENEFH028.760246785.IUEFHWUIO.EF"));
-    const m0 = new Uint8Array(bs), m1 = new Uint8Array(bs);
+    const m0 = new Uint8Array(streebog256.blockLen),
+        m1 = new Uint8Array(streebog256.blockLen);
     for(let j = 0; j < (password.length !== 0 ? 2000 : 2); j++) {
         m0.set(xorBytes(c, _36));
         m1.set(xorBytes(c, _5C));

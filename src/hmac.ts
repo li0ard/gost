@@ -14,7 +14,6 @@ type CHmac<T extends Hash<T>> = {
 const createHmac = <T extends Hash<T>>(hash: CHash<T>): CHmac<T> => {
     const hmacC = (key: TArg<Uint8Array>, msg: TArg<Uint8Array>) =>
         hmac(hash, key, msg);
-    
     hmacC.outputLen = hash.outputLen;
     hmacC.blockLen = hash.blockLen;
     hmacC.canXOF = false;
@@ -39,6 +38,7 @@ const createHmac = <T extends Hash<T>>(hash: CHash<T>): CHmac<T> => {
  * ```
  */
 export const streebog256hmac = createHmac(streebog256);
+
 /**
  * HMAC over Streebog-512 hash function
  * 

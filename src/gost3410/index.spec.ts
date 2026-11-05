@@ -32,7 +32,6 @@ describe("[SIGN] GOST R 34.10-2001", () => {
         const privKey = hexToBytes("18c2e480f2e85a3c4b26f202f9610c744a584ba087e254e55c47faba6888f237");
         const expectedPk = hexToBytes("1e0ccfac352bf57fd18808092406e72487ae138776170379a7bebb61e5b14535094129e0f59e2fc37345a0869a0694a5cacc4fcb272b1763e4344a090d93f874");
         const expectedSign = hexToBytes("1ba4446a12e1a878d675352dcfd4580c9ae7919dc6428b39966b7354a9d576962722e6f531f3bf76bb27c90f3ab0fb6b11d0a2810ac2f18e22ebbb9f6d5fbfcb");
-
         performTest(gost2001CC, privKey, digest, rand, expectedPk, expectedSign);
     });
 

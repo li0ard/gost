@@ -9,7 +9,6 @@ import { HashMD } from "@noble/hashes/_md.js";
 
 // Precompute Substitution+ Permutation + Linear transformations
 let T: Uint32Array | undefined;
-
 const genTable = (): TRet<Uint32Array> => {
     const t = new Uint32Array(8 * 256 * 2);
     for (let c = 0; c < 8; c++) {
@@ -65,7 +64,6 @@ const G = (h: TArg<Uint32Array>, n: TArg<Uint32Array> | null, m: TArg<Uint32Arra
     LPS(X, K, t);
 
     for (let i = 0; i < 16; i++) S[i] = K[i] ^ m[i];
-
     for (let r = 0; r < 12; r++) {
         const off = r << 4;
         for (let i = 0; i < 16; i++) X[i] = K[i] ^ C[off + i];
@@ -73,7 +71,6 @@ const G = (h: TArg<Uint32Array>, n: TArg<Uint32Array> | null, m: TArg<Uint32Arra
         LPS(S, Y, t);
         for (let i = 0; i < 16; i++) S[i] = Y[i] ^ K[i];
     }
-
     for (let i = 0; i < 16; i++) h[i] ^= S[i] ^ m[i];
 }
 

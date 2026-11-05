@@ -11,8 +11,6 @@ import { abool, abytes, createView, type TArg, type TRet } from "@noble/hashes/u
 import { GOST_28147_89_CRYPTO_PRO_A_PARAM_SET, TC26_GOST_28147_PARAM_Z, magmaKeySequences } from "./const.js";
 import type { Cipher } from "../types.js";
 
-const BLOCKSIZE = 8;
-
 const nibble = (sbox: TArg<Uint8Array>, r: number, i: number): number => {
     const b = sbox[(r << 3) + (i >> 1)];
     return (i & 1) === 0 ? (b >>> 4) : (b & 0x0f);
@@ -43,7 +41,7 @@ const G = (v: number, t: TArg<Uint32Array>): number =>
 /** Magma (GOST R 34.12-2015 and GOST 28147-89) cipher */
 export class Magma implements Cipher {
     readonly keySize = 32;
-    readonly blockSize = BLOCKSIZE;
+    readonly blockSize = 8;
 
     private rk = new Uint32Array(8);
 
@@ -80,7 +78,7 @@ export class Magma implements Cipher {
             a0 = temp;
         }
 
-        const out = new Uint8Array(BLOCKSIZE),
+        const out = new Uint8Array(this.blockSize),
             outView = createView(out);
         if (this.isLegacy) {
             outView.setUint32(0, a0, true);
