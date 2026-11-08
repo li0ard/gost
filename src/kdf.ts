@@ -3,12 +3,12 @@ import { numberToBytesBE, type TArg, type TRet } from "@noble/curves/utils.js";
 import { pbkdf2 } from "@noble/hashes/pbkdf2.js";
 import { streebog256, streebog512 } from "./streebog/index.js";
 import { gost341194 } from "./gost341194/index.js";
-import { xorBytesInPlace } from "./utils.js";
+import { _0, _NULL, xorBytesInPlace } from "./utils.js";
 import { kdfInputToBytes, type KDFInput } from "@noble/hashes/utils.js";
 
-const _0 = Uint8Array.of(0),
-    _36 = new Uint8Array(64).fill(0x36),
-    _6A = new Uint8Array(64).fill(0x6A); // 0x36 ^ 0x5C
+const _36 = new Uint8Array(64).fill(0x36),
+    _6A = new Uint8Array(64).fill(0x6A), // 0x36 ^ 0x5C
+    CPKDF_CONST = new TextEncoder().encode("DENEFH028.760246785.IUEFHWUIO.EF");
 
 /**
  * Key derivation function `KDF_GOSTR3411_2012_256`
@@ -115,6 +115,13 @@ export const gost341194pbkdf2 = (
     dkLen: number
 ): TRet<Uint8Array> => pbkdf2(gost341194, password, salt, { dkLen, c: iter });
 
+const cpkdfStep = (input: Uint8Array, input2: Uint8Array, c: Uint8Array) => {
+    xorBytesInPlace(c, _36);
+    const hasher = streebog256.create().update(c).update(input);
+    xorBytesInPlace(c, _6A);
+    hasher.update(c).update(input2).digestInto(c);
+}
+
 /**
  * CryptoPro key derivation function (CPKDF)
  * 
@@ -131,39 +138,24 @@ export const cpkdf = (
     password: TArg<KDFInput>,
     salt: TArg<KDFInput>
 ): TRet<Uint8Array> => {
-    if(password.length > 256)
-        throw new Error("Password cannot be longer than 256 symbols");
     const p = kdfInputToBytes(password),
         s = kdfInputToBytes(salt),
-        hasPwd = p.length !== 0,
-        pin = new Uint8Array(p.length * 4);
+        hasPwd = p.length !== 0;
+    if(p.length > 256)
+        throw new Error("Password cannot be longer than 256 symbols");
+
+    const pin = new Uint8Array(p.length * 4);
     for(let i = 0; i < p.length; i++) pin[i*4] = p[i];
 
-    let hasher = streebog256.create();
-    hasher.update(s);
-    if(hasPwd) hasher.update(pin);
-    const hash = hasher.digest();
-    hasher = streebog256.create();
-
-    const c = new Uint8Array(streebog256.blockLen);
-    c.set(new TextEncoder().encode("DENEFH028.760246785.IUEFHWUIO.EF"));
+    const h0 = streebog256.create().update(s).update(hasPwd ? pin : _NULL).digest(),
+        c = new Uint8Array(streebog256.blockLen);
+    c.set(CPKDF_CONST);
     for(let j = 0; j < (hasPwd ? 2000 : 2); j++) {
-        hasher = streebog256.create();
-        xorBytesInPlace(c, _36);
-        hasher.update(c).update(hash);
-        xorBytesInPlace(c, _6A);
-        hasher.update(c).update(hash);
-        hasher.digestInto(c);
+        cpkdfStep(h0, h0, c);
         c.fill(0, 32);
     }
 
     const cs = c.subarray(0, 32);
-    hasher = streebog256.create();
-    xorBytesInPlace(cs, _36);
-    hasher.update(cs).update(s);
-    xorBytesInPlace(cs, _6A);
-    hasher.update(cs);
-    if(hasPwd) hasher.update(pin);
-
-    return streebog256(hasher.digest());
+    cpkdfStep(s, hasPwd ? pin : _NULL, cs);
+    return streebog256(cs);
 }

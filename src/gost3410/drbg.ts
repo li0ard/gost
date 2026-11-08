@@ -1,8 +1,7 @@
 import type { IField } from "@noble/curves/abstract/modular.js";
 import { concatBytes, bytesToNumberBE, numberToBytesBE, randomBytes, type TArg } from "@noble/curves/utils.js";
 import { streebog256hmac, streebog512hmac } from "../hmac.js";
-
-const zero = new Uint8Array([0x00]), one = new Uint8Array([0x01]);
+import { _0, _1 } from "../utils.js";
 
 /** 
  * Crates minimal HMAC-DRBG from RFC 6979 for GOST curves
@@ -34,9 +33,9 @@ export const createStreebogHmacDrbg = (Fn: TArg<IField<bigint>>) => {
         const seed = concatBytes(...seedArgs);
 
         const V = new Uint8Array(Fn.BYTES).fill(0x01),
-            K = hmac(new Uint8Array(Fn.BYTES), concatBytes(V, zero, seed));
+            K = hmac(new Uint8Array(Fn.BYTES), concatBytes(V, _0, seed));
         V.set(hmac(K, V));
-        K.set(hmac(K, concatBytes(V, one, seed)));
+        K.set(hmac(K, concatBytes(V, _1, seed)));
         V.set(hmac(K, V));
 
         while (true) {
@@ -48,7 +47,7 @@ export const createStreebogHmacDrbg = (Fn: TArg<IField<bigint>>) => {
 
             const k = bits2int(T);
             if (Fn.isValidNot0(k)) return k;
-            K.set(hmac(K, concatBytes(V, zero)));
+            K.set(hmac(K, concatBytes(V, _0)));
             V.set(hmac(K, V));
         }
     }

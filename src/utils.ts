@@ -1,6 +1,9 @@
 import { abytes, anumber, type TArg, type TRet } from "@noble/hashes/utils.js";
 
-export const _2_32 = 0x100000000;
+export const _2_32 = 0x100000000,
+    _0 = Uint8Array.of(0),
+    _1 = Uint8Array.of(1),
+    _NULL = Uint8Array.of();
 
 export const xorBytes = (a: TArg<Uint8Array>, b: TArg<Uint8Array>): TRet<Uint8Array> => {
     const mlen = Math.min(a.length, b.length),
