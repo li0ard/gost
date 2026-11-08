@@ -108,7 +108,7 @@ export class _Gost341194 extends HashMD<_Gost341194> {
         abytes(sbox, 64, "sbox");
     }
 
-    protected process(view: DataView, offset: number) {
+    protected process(view: DataView, offset: number = 0) {
         let c = 0;
         for (let i = 0; i < 32; i++) {
             const b = view.getUint8(offset + i),
@@ -134,7 +134,7 @@ export class _Gost341194 extends HashMD<_Gost341194> {
         this.finished = true;
         if (this.pos > 0) {
             this.buffer.fill(0, this.pos);
-            this.process(this.view, 0);
+            this.process(this.view);
         }
 
         _step(this.h, numberToBytesBE(BigInt(this.length) * 8n, 32), this.sbox, this.h);

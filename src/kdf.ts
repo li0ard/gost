@@ -3,14 +3,12 @@ import { numberToBytesBE, type TArg, type TRet } from "@noble/curves/utils.js";
 import { pbkdf2 } from "@noble/hashes/pbkdf2.js";
 import { streebog256, streebog512 } from "./streebog/index.js";
 import { gost341194 } from "./gost341194/index.js";
-import { xorBytes } from "./utils.js";
+import { xorBytesInPlace } from "./utils.js";
 import { kdfInputToBytes, type KDFInput } from "@noble/hashes/utils.js";
 
-const _0 = new Uint8Array([0]),
-    _1 = new Uint8Array([1]),
-    _256 = new Uint8Array([1,0]),
+const _0 = Uint8Array.of(0),
     _36 = new Uint8Array(64).fill(0x36),
-    _5C = new Uint8Array(64).fill(0x5C);
+    _6A = new Uint8Array(64).fill(0x6A); // 0x36 ^ 0x5C
 
 /**
  * Key derivation function `KDF_GOSTR3411_2012_256`
@@ -23,10 +21,7 @@ export const kdf_gostr3411_2012_256 = (
     key: TArg<Uint8Array>,
     label: TArg<Uint8Array>,
     seed: TArg<Uint8Array>
-): TRet<Uint8Array> => streebog256hmac.create(key)
-    .update(_1).update(label).update(_0)
-    .update(seed).update(_256)
-    .digest();
+): TRet<Uint8Array> => kdf_tree_gostr3411_2012_256(key, label, seed, 1)[0];
 
 /** 
  * Key derivation function `KDF_TREE_GOSTR3411_2012_256`
@@ -138,39 +133,37 @@ export const cpkdf = (
 ): TRet<Uint8Array> => {
     if(password.length > 256)
         throw new Error("Password cannot be longer than 256 symbols");
-    let hasher = streebog256.create();
     const p = kdfInputToBytes(password),
-        s = kdfInputToBytes(salt);
+        s = kdfInputToBytes(salt),
+        hasPwd = p.length !== 0,
+        pin = new Uint8Array(p.length * 4);
+    for(let i = 0; i < p.length; i++) pin[i*4] = p[i];
 
-    const pin = new Uint8Array(password.length * 4);
-    for(let i = 0; i < password.length; i++) pin[i*4] = p[i];
-
+    let hasher = streebog256.create();
     hasher.update(s);
-    if(password.length !== 0) hasher.update(pin);
+    if(hasPwd) hasher.update(pin);
     const hash = hasher.digest();
     hasher = streebog256.create();
 
     const c = new Uint8Array(streebog256.blockLen);
     c.set(new TextEncoder().encode("DENEFH028.760246785.IUEFHWUIO.EF"));
-    const m0 = new Uint8Array(streebog256.blockLen),
-        m1 = new Uint8Array(streebog256.blockLen);
-    for(let j = 0; j < (password.length !== 0 ? 2000 : 2); j++) {
-        m0.set(xorBytes(c, _36));
-        m1.set(xorBytes(c, _5C));
-        hasher.update(m0).update(hash).update(m1).update(hash);
-        c.set(hasher.digest());
-        hasher = streebog256.create()
+    for(let j = 0; j < (hasPwd ? 2000 : 2); j++) {
+        hasher = streebog256.create();
+        xorBytesInPlace(c, _36);
+        hasher.update(c).update(hash);
+        xorBytesInPlace(c, _6A);
+        hasher.update(c).update(hash);
+        hasher.digestInto(c);
         c.fill(0, 32);
     }
 
-    m0.set(xorBytes(c, _36));
-    m1.set(xorBytes(c, _5C));
-    hasher.update(m0.subarray(0, 32)).update(s).update(m1.subarray(0, 32));
-    if(password.length !== 0) hasher.update(pin);
-
-    const hash2 = hasher.digest();
+    const cs = c.subarray(0, 32);
     hasher = streebog256.create();
-    hasher.update(hash2);
+    xorBytesInPlace(cs, _36);
+    hasher.update(cs).update(s);
+    xorBytesInPlace(cs, _6A);
+    hasher.update(cs);
+    if(hasPwd) hasher.update(pin);
 
-    return hasher.digest();
+    return streebog256(hasher.digest());
 }
