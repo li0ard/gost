@@ -13,8 +13,6 @@
         "@peculiar/asn1-x509": "^2.11.1",
         "@types/bun": "latest",
         "typedoc": "^0.28.20",
-      },
-      "peerDependencies": {
         "typescript": "^5.9.3",
       },
     },

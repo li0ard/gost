@@ -50,7 +50,7 @@ const reverseCoords = (point: TArg<Uint8Array>): TRet<Uint8Array> => {
     );
 }
 
-const _4 = Uint8Array.of(4);
+const _4 = /* @__PURE__ */ Uint8Array.of(4);
 
 /** Creates GOST R 34.10-2012 signing interface */
 export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
@@ -226,25 +226,25 @@ export const gost3410 = (parameters: GostCurveParameters): ECDSA => {
 
 export type { GostCurveParameters } from "./const.js";
 /** GOST R 34.10-2001 CryptoCom curve */
-export const gost2001CC = gost3410(GOSTR3410_2001_PARAM_SET_CC);
+export const gost2001CC = /* @__PURE__ */ gost3410(GOSTR3410_2001_PARAM_SET_CC);
 /** GOST R 34.10-2001 test curve */
-export const gost2001Test = gost3410(GOSTR3410_2001_TEST_PARAM_SET);
+export const gost2001Test = /* @__PURE__ */ gost3410(GOSTR3410_2001_TEST_PARAM_SET);
 /** GOST R 34.10-2012 256 bit `A` curve */
-export const gost256A = gost3410(GOSTR3410_2012_256_PARAM_SET_A);
+export const gost256A = /* @__PURE__ */ gost3410(GOSTR3410_2012_256_PARAM_SET_A);
 /** GOST R 34.10-2012 256 bit `B` curve (aka CryptoPro `A` and `X-A`) */
-export const gost256B = gost3410(GOSTR3410_2012_256_PARAM_SET_B);
+export const gost256B = /* @__PURE__ */ gost3410(GOSTR3410_2012_256_PARAM_SET_B);
 /** GOST R 34.10-2012 256 bit `C` curve (aka CryptoPro `B`) */
-export const gost256C = gost3410(GOSTR3410_2012_256_PARAM_SET_C);
+export const gost256C = /* @__PURE__ */ gost3410(GOSTR3410_2012_256_PARAM_SET_C);
 /** GOST R 34.10-2012 256 bit `D` curve (aka CryptoPro `C` and `X-B`) */
-export const gost256D = gost3410(GOSTR3410_2012_256_PARAM_SET_D);
+export const gost256D = /* @__PURE__ */ gost3410(GOSTR3410_2012_256_PARAM_SET_D);
 /** GOST R 34.10-2012 512 bit test curve */
-export const gost512Test = gost3410(GOSTR3410_2012_512_TEST_PARAM_SET);
+export const gost512Test = /* @__PURE__ */ gost3410(GOSTR3410_2012_512_TEST_PARAM_SET);
 /** GOST R 34.10-2012 512 bit `A` curve */
-export const gost512A = gost3410(GOSTR3410_2012_512_PARAM_SET_A);
+export const gost512A = /* @__PURE__ */ gost3410(GOSTR3410_2012_512_PARAM_SET_A);
 /** GOST R 34.10-2012 512 bit `B` curve */
-export const gost512B = gost3410(GOSTR3410_2012_512_PARAM_SET_B);
+export const gost512B = /* @__PURE__ */ gost3410(GOSTR3410_2012_512_PARAM_SET_B);
 /** GOST R 34.10-2012 512 bit `C` curve */
-export const gost512C = gost3410(GOSTR3410_2012_512_PARAM_SET_C);
+export const gost512C = /* @__PURE__ */ gost3410(GOSTR3410_2012_512_PARAM_SET_C);
 
 /** Standard curves */
 export const CURVES = {

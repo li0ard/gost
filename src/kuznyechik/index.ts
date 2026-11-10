@@ -3,9 +3,10 @@
  * @module
  */
 import { abytes, copyBytes, swap32IfBE, u32, u8, type TArg, type TRet } from "@noble/hashes/utils.js";
-import { ITER, L as L_, PI, PI_REV } from "./const.js";
+import { C as C_, L as L_, PI, PI_REV } from "./const.js";
 import type { Cipher } from "../types.js";
 import { gf256Multiply } from "../gf/index.js";
+import { lazy } from "../utils.js";
 
 const L = (input: TArg<Uint8Array>) => {
     let p = 0;
@@ -45,9 +46,10 @@ const genTable = (sbox: TArg<Uint8Array>, fn: (x: TArg<Uint8Array>) => void) => 
     return swap32IfBE(table);
 }
 
-const T_ENC = genTable(PI, L),
-    T_DEC = genTable(PI_REV, LR),
-    T_LINV = genTable(Uint8Array.from({ length: 256 }, (_, i) => i), LR);
+const T_ENC = /* @__PURE__ */ lazy(() => genTable(PI, L)),
+    T_DEC = /* @__PURE__ */ lazy(() => genTable(PI_REV, LR)),
+    T_LINV = /* @__PURE__ */ lazy(() => genTable(Uint8Array.from({ length: 256 }, (_, i) => i), LR)),
+    C = /* @__PURE__ */ lazy(() => swap32IfBE(C_.slice()));
 
 const lookup = (table: TArg<Uint32Array>, s: TArg<Uint32Array>) => {
     let a = 0, b = 0, c = 0, d = 0;
@@ -59,8 +61,6 @@ const lookup = (table: TArg<Uint32Array>, s: TArg<Uint32Array>) => {
     s[0] = a; s[1] = b;
     s[2] = c; s[3] = d;
 }
-
-const C = swap32IfBE(u32(ITER).slice());
 
 const xor4 = (s: TArg<Uint32Array>, k: TArg<Uint32Array>, o = 0) => {
     s[0] ^= k[o]; s[1] ^= k[o + 1];
@@ -81,15 +81,16 @@ export class Kuznyechik implements Cipher {
         swap32IfBE(this.rk.subarray(0, 8));
         this.k0 = key.slice(0, 16);
 
+        const enc = T_ENC(), linv = T_LINV(), c = C();
         let a = this.rk.slice(0, 4),
             b = this.rk.slice(4, 8),
             t = new Uint32Array(4);
         for (let i = 0; i < 4; i++) {
             for (let j = 0; j < 8; j++) {
                 const o = (i * 8 + j) * 4;
-                t[0] = a[0] ^ C[o]; t[1] = a[1] ^ C[o + 1];
-                t[2] = a[2] ^ C[o + 2]; t[3] = a[3] ^ C[o + 3];
-                lookup(T_ENC, t);
+                t[0] = a[0] ^ c[o]; t[1] = a[1] ^ c[o + 1];
+                t[2] = a[2] ^ c[o + 2]; t[3] = a[3] ^ c[o + 3];
+                lookup(enc, t);
                 xor4(t, b);
                 const old = b; b = a;
                 a = t; t = old;
@@ -100,7 +101,7 @@ export class Kuznyechik implements Cipher {
 
         for (let r = 1; r <= 8; r++) {
             t.set(this.rk.subarray(r * 4, r * 4 + 4));
-            lookup(T_LINV, t);
+            lookup(linv, t);
             this.rkInv.set(t, r * 4);
         }
     }
@@ -108,10 +109,11 @@ export class Kuznyechik implements Cipher {
     encrypt(plaintext: TArg<Uint8Array>): TRet<Uint8Array> {
         abytes(plaintext, this.blockSize, "plaintext");
         const out = copyBytes(plaintext),
-            s = swap32IfBE(u32(out));
+            s = swap32IfBE(u32(out)),
+            enc = T_ENC();
         for (let r = 0; r < 9; r++) {
             xor4(s, this.rk, r * 4);
-            lookup(T_ENC, s);
+            lookup(enc, s);
         }
         xor4(s, this.rk, 36);
         swap32IfBE(s);
@@ -122,11 +124,13 @@ export class Kuznyechik implements Cipher {
     decrypt(ciphertext: TArg<Uint8Array>): TRet<Uint8Array> {
         abytes(ciphertext, this.blockSize, "ciphertext");
         const out = copyBytes(ciphertext),
-            s = swap32IfBE(u32(out));
+            s = swap32IfBE(u32(out)),
+            dec = T_DEC(),
+            l_env = T_LINV();
         xor4(s, this.rk, 36);
-        lookup(T_LINV, s);
+        lookup(l_env, s);
         for (let r = 8; r >= 1; r--) {
-            lookup(T_DEC, s);
+            lookup(dec, s);
             xor4(s, this.rkInv, r * 4);
         }
         swap32IfBE(s);

@@ -1,6 +1,7 @@
 import type { AffinePoint, WeierstrassPoint, WeierstrassPointCons } from "@noble/curves/abstract/weierstrass.js";
-import type { CHash, TArg, TRet } from "@noble/hashes/utils.js";
+import type { CHash, Hash, TArg, TRet } from "@noble/hashes/utils.js";
 import type { GostCurveParameters } from "./gost3410/index.js";
+import type { _HMAC } from "@noble/hashes/hmac.js";
 
 export type CipherOrHashFunctionWrapper = (msg: TArg<Uint8Array>) => TRet<Uint8Array>;
 
@@ -143,4 +144,13 @@ export type ECDSA = {
          */
         deserializePoint: (point: TArg<Uint8Array>) => WeierstrassPoint<bigint>;
     }
+}
+
+/** Callable HMAC function type */
+export type CHmac<T extends Hash<T>> = {
+    (key: TArg<Uint8Array>, msg: TArg<Uint8Array>): TRet<Uint8Array>;
+    readonly outputLen: number;
+    readonly blockLen: number;
+    readonly canXOF: boolean;
+    create(key: TArg<Uint8Array>): _HMAC<T>;
 }

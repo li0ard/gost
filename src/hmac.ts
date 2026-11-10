@@ -1,15 +1,8 @@
-import type { CHash, Hash, TArg, TRet } from "@noble/hashes/utils.js";
+import type { CHash, Hash, TArg } from "@noble/hashes/utils.js";
 import { type _HMAC, hmac } from "@noble/hashes/hmac.js";
 import { streebog256, streebog512 } from "./streebog/index.js";
 import { gost341194 } from "./gost341194/index.js";
-
-type CHmac<T extends Hash<T>> = {
-    (key: TArg<Uint8Array>, msg: TArg<Uint8Array>): TRet<Uint8Array>;
-    readonly outputLen: number;
-    readonly blockLen: number;
-    readonly canXOF: boolean;
-    create(key: TArg<Uint8Array>): _HMAC<T>;
-}
+import type { CHmac } from "./types.js";
 
 const createHmac = <T extends Hash<T>>(hash: CHash<T>): CHmac<T> => {
     const hmacC = (key: TArg<Uint8Array>, msg: TArg<Uint8Array>) =>
@@ -37,7 +30,7 @@ const createHmac = <T extends Hash<T>>(hash: CHash<T>): CHmac<T> => {
  * const mac2 = streebog256hmac.create(key).update(message).digest();
  * ```
  */
-export const streebog256hmac = createHmac(streebog256);
+export const streebog256hmac = /* @__PURE__ */ createHmac(streebog256);
 
 /**
  * HMAC over Streebog-512 hash function
@@ -54,7 +47,7 @@ export const streebog256hmac = createHmac(streebog256);
  * const mac2 = streebog512hmac.create(key).update(message).digest();
  * ```
  */
-export const streebog512hmac = createHmac(streebog512);
+export const streebog512hmac = /* @__PURE__ */ createHmac(streebog512);
 
 /**
  * HMAC over GOST R 34.11-94 hash function
@@ -71,4 +64,4 @@ export const streebog512hmac = createHmac(streebog512);
  * const mac2 = gost341194hmac.create(key).update(message).digest();
  * ```
  */
-export const gost341194hmac = createHmac(gost341194);
+export const gost341194hmac = /* @__PURE__ */ createHmac(gost341194);

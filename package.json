@@ -1,6 +1,6 @@
 {
   "name": "@li0ard/gost",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "main": "index.js",
   "types": "index.d.ts",
   "type": "module",
@@ -37,9 +37,7 @@
     "@peculiar/asn1-schema": "^2.11.1",
     "@peculiar/asn1-x509": "^2.11.1",
     "@types/bun": "latest",
-    "typedoc": "^0.28.20"
-  },
-  "peerDependencies": {
+    "typedoc": "^0.28.20",
     "typescript": "^5.9.3"
   },
   "dependencies": {
@@ -50,5 +48,6 @@
   "publishConfig": {
     "access": "public"
   },
-  "keywords": ["gost", "crypto", "magma", "kuznyechik", "streebog", "gost341194", "tc26"]
+  "keywords": ["gost", "crypto", "magma", "kuznyechik", "streebog", "gost341194", "tc26"],
+  "sideEffects": false
 }

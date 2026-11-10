@@ -1,8 +1,8 @@
 import { abytes, type TArg, type TRet } from "@noble/hashes/utils.js";
 import type { Cipher, CipherCtor, MACMode } from "../types.js";
-import { xorBytesInPlace } from "../utils.js";
-import { magmaKeySequences, Magma } from "../magma/index.js";
-import { acpkm_master } from "./_keytransform.js";
+import { filled, xorBytesInPlace } from "../utils.js";
+import { magmaKeySequences, type Magma } from "../magma/index.js";
+import { ctr } from "./ctr.js";
 
 const Rb64 = 0b11011, Rb128 = 0b10000111, ACPKM_MASTER_KEYSIZE = 32;
 
@@ -22,6 +22,12 @@ const gfDouble = (k: TArg<Uint8Array>, Rb: number): TRet<Uint8Array> => {
     if (shift1(k, out)) out[out.length - 1] ^= Rb;
     return out;
 }
+
+const acpkm_master = (cipher: Cipher, length: number): TRet<Uint8Array> => ctr(
+    cipher,
+    filled(cipher.blockSize / 2, 0xff),
+    true, true
+).crypt(new Uint8Array(length));
 
 /**
  * **EN:** Message Authentication Code (MAC) mode

@@ -3,12 +3,12 @@ import { numberToBytesBE, type TArg, type TRet } from "@noble/curves/utils.js";
 import { pbkdf2 } from "@noble/hashes/pbkdf2.js";
 import { streebog256, streebog512 } from "./streebog/index.js";
 import { gost341194 } from "./gost341194/index.js";
-import { _0, _NULL, xorBytesInPlace } from "./utils.js";
-import { kdfInputToBytes, type KDFInput } from "@noble/hashes/utils.js";
+import { _0, _NULL, filled, xorBytesInPlace } from "./utils.js";
+import { kdfInputToBytes, utf8ToBytes, type KDFInput } from "@noble/hashes/utils.js";
 
-const _36 = new Uint8Array(64).fill(0x36),
-    _6A = new Uint8Array(64).fill(0x6A), // 0x36 ^ 0x5C
-    CPKDF_CONST = new TextEncoder().encode("DENEFH028.760246785.IUEFHWUIO.EF");
+const _36 = /* @__PURE__ */ filled(64, 0x36),
+    _6A = /* @__PURE__ */ filled(64, 0x6A), // 0x36 ^ 0x5C
+    CPKDF_CONST = /* @__PURE__ */ utf8ToBytes("DENEFH028.760246785.IUEFHWUIO.EF");
 
 /**
  * Key derivation function `KDF_GOSTR3411_2012_256`

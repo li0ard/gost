@@ -6,10 +6,10 @@ import { aexists, aoutput, clean, createHasher, createView, type TArg, type TRet
 import { A, C } from "./const.js";
 import { PI } from "../kuznyechik/const.js";
 import { HashMD } from "@noble/hashes/_md.js";
+import { lazy } from "../utils.js";
 
 // Precompute Substitution+ Permutation + Linear transformations
-let T: Uint32Array | undefined;
-const genTable = (): TRet<Uint32Array> => {
+const T = /* @__PURE__ */ lazy(() => {
     const t = new Uint32Array(8 * 256 * 2);
     for (let c = 0; c < 8; c++) {
         for (let v = 0; v < 256; v++) {
@@ -28,7 +28,7 @@ const genTable = (): TRet<Uint32Array> => {
     }
 
     return t;
-}
+});
 
 const K = new Uint32Array(16),
     S = new Uint32Array(16),
@@ -58,7 +58,7 @@ const LPS = (x: TArg<Uint32Array>, out: TArg<Uint32Array>, t: TArg<Uint32Array>)
 
 // h will be mutated
 const G = (h: TArg<Uint32Array>, n: TArg<Uint32Array> | null, m: TArg<Uint32Array>) => {
-    const t = (T ||= genTable());
+    const t = T();
     if (n) for (let i = 0; i < 16; i++) X[i] = n[i] ^ h[i];
     else X.set(h);
     LPS(X, K, t);
@@ -195,7 +195,7 @@ export class _Streebog512 extends Streebog<_Streebog512> {
 export const streebog256 = /* @__PURE__ */ createHasher(
     () => new _Streebog256(),
     {
-        oid: Uint8Array.from([0x06, 0x08, 0x2A, 0x85, 0x03, 0x07, 0x01, 0x01, 0x02, 0x02])
+        oid: /* @__PURE__ */ Uint8Array.from([0x06, 0x08, 0x2A, 0x85, 0x03, 0x07, 0x01, 0x01, 0x02, 0x02])
     }
 );
 /**
@@ -214,6 +214,6 @@ export const streebog256 = /* @__PURE__ */ createHasher(
 export const streebog512 = /* @__PURE__ */ createHasher(
     () => new _Streebog512(),
     {
-        oid: Uint8Array.from([0x06, 0x08, 0x2A, 0x85, 0x03, 0x07, 0x01, 0x01, 0x02, 0x03])
+        oid: /* @__PURE__ */ Uint8Array.from([0x06, 0x08, 0x2A, 0x85, 0x03, 0x07, 0x01, 0x01, 0x02, 0x03])
     }
 );

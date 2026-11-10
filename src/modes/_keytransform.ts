@@ -1,8 +1,7 @@
 import { type TArg, type TRet, copyBytes, createView } from "@noble/hashes/utils.js";
 import { MagmaLegacy } from "../magma/index.js";
 import { cfb } from "./cfb.js";
-import type { Cipher, CipherOrHashFunctionWrapper } from "../types.js";
-import { ctr } from "./ctr.js";
+import type { CipherOrHashFunctionWrapper } from "../types.js";
 
 export const cp_kek_diversify = (
     kek: TArg<Uint8Array>,
@@ -27,7 +26,7 @@ export const cp_kek_diversify = (
     return out;
 }
 
-const ACPKM_D = new Uint8Array([
+const ACPKM_D = /* @__PURE__ */ new Uint8Array([
     0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87,
     0x88, 0x89, 0x8A, 0x8B, 0x8C, 0x8D, 0x8E, 0x8F,
     0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97,
@@ -40,9 +39,3 @@ export const acpkm = (encrypter: CipherOrHashFunctionWrapper, bs: number): TRet<
 
     return out;
 }
-
-export const acpkm_master = (cipher: Cipher, length: number): TRet<Uint8Array> => ctr(
-    cipher,
-    new Uint8Array(cipher.blockSize / 2).fill(0xFF),
-    true, true
-).crypt(new Uint8Array(length));

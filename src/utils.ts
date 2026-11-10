@@ -1,9 +1,9 @@
 import { abytes, anumber, type TArg, type TRet } from "@noble/hashes/utils.js";
 
 export const _2_32 = 0x100000000,
-    _0 = Uint8Array.of(0),
-    _1 = Uint8Array.of(1),
-    _NULL = Uint8Array.of();
+    _0 = /* @__PURE__ */ Uint8Array.of(0),
+    _1 = /* @__PURE__ */ Uint8Array.of(1),
+    _NULL = /* @__PURE__ */ Uint8Array.of();
 
 export const xorBytes = (a: TArg<Uint8Array>, b: TArg<Uint8Array>): TRet<Uint8Array> => {
     const mlen = Math.min(a.length, b.length),
@@ -45,4 +45,11 @@ export const splitBlocks = (data: TArg<Uint8Array>, blockSize: number): TRet<Uin
     const blocks = [];
     for (let i = 0; i < data.length; i += blockSize) blocks.push(data.subarray(i, i + blockSize));
     return blocks as TRet<Uint8Array[]>;
+}
+
+export const filled = (len: number, v: number) => new Uint8Array(len).fill(v);
+
+export const lazy = <T>(fn: () => T): (() => T) => {
+    let v: T | undefined;
+    return () => v ||= fn();
 }
