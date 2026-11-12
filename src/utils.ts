@@ -48,8 +48,3 @@ export const splitBlocks = (data: TArg<Uint8Array>, blockSize: number): TRet<Uin
 }
 
 export const filled = (len: number, v: number) => new Uint8Array(len).fill(v);
-
-export const lazy = <T>(fn: () => T): (() => T) => {
-    let v: T | undefined;
-    return () => v ||= fn();
-}

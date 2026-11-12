@@ -6,10 +6,9 @@ import { aexists, aoutput, clean, createHasher, createView, type TArg, type TRet
 import { A, C } from "./const.js";
 import { PI } from "../kuznyechik/const.js";
 import { HashMD } from "@noble/hashes/_md.js";
-import { lazy } from "../utils.js";
 
 // Precompute Substitution+ Permutation + Linear transformations
-const T = /* @__PURE__ */ lazy(() => {
+const T = /* @__PURE__ */ (() => {
     const t = new Uint32Array(8 * 256 * 2);
     for (let c = 0; c < 8; c++) {
         for (let v = 0; v < 256; v++) {
@@ -28,7 +27,7 @@ const T = /* @__PURE__ */ lazy(() => {
     }
 
     return t;
-});
+})();
 
 const K = new Uint32Array(16),
     S = new Uint32Array(16),
@@ -36,20 +35,20 @@ const K = new Uint32Array(16),
     Y = new Uint32Array(16),
     M = new Uint32Array(16);
 
-const LPS = (x: TArg<Uint32Array>, out: TArg<Uint32Array>, t: TArg<Uint32Array>) => {
+const LPS = (x: TArg<Uint32Array>, out: TArg<Uint32Array>) => {
     for (let r = 0; r < 8; r++) {
         const sh = 24 - ((r & 3) << 3),
             o = r >> 2;
         let hi = 0, lo = 0, idx: number;
 
-        idx = ((0 << 8) | ((x[0 + o] >>> sh) & 0xff)) << 1; hi ^= t[idx]; lo ^= t[idx + 1];
-        idx = ((1 << 8) | ((x[2 + o] >>> sh) & 0xff)) << 1; hi ^= t[idx]; lo ^= t[idx + 1];
-        idx = ((2 << 8) | ((x[4 + o] >>> sh) & 0xff)) << 1; hi ^= t[idx]; lo ^= t[idx + 1];
-        idx = ((3 << 8) | ((x[6 + o] >>> sh) & 0xff)) << 1; hi ^= t[idx]; lo ^= t[idx + 1];
-        idx = ((4 << 8) | ((x[8 + o] >>> sh) & 0xff)) << 1; hi ^= t[idx]; lo ^= t[idx + 1];
-        idx = ((5 << 8) | ((x[10 + o] >>> sh) & 0xff)) << 1; hi ^= t[idx]; lo ^= t[idx + 1];
-        idx = ((6 << 8) | ((x[12 + o] >>> sh) & 0xff)) << 1; hi ^= t[idx]; lo ^= t[idx + 1];
-        idx = ((7 << 8) | ((x[14 + o] >>> sh) & 0xff)) << 1; hi ^= t[idx]; lo ^= t[idx + 1];
+        idx = ((0 << 8) | ((x[0 + o] >>> sh) & 0xff)) << 1; hi ^= T[idx]; lo ^= T[idx + 1];
+        idx = ((1 << 8) | ((x[2 + o] >>> sh) & 0xff)) << 1; hi ^= T[idx]; lo ^= T[idx + 1];
+        idx = ((2 << 8) | ((x[4 + o] >>> sh) & 0xff)) << 1; hi ^= T[idx]; lo ^= T[idx + 1];
+        idx = ((3 << 8) | ((x[6 + o] >>> sh) & 0xff)) << 1; hi ^= T[idx]; lo ^= T[idx + 1];
+        idx = ((4 << 8) | ((x[8 + o] >>> sh) & 0xff)) << 1; hi ^= T[idx]; lo ^= T[idx + 1];
+        idx = ((5 << 8) | ((x[10 + o] >>> sh) & 0xff)) << 1; hi ^= T[idx]; lo ^= T[idx + 1];
+        idx = ((6 << 8) | ((x[12 + o] >>> sh) & 0xff)) << 1; hi ^= T[idx]; lo ^= T[idx + 1];
+        idx = ((7 << 8) | ((x[14 + o] >>> sh) & 0xff)) << 1; hi ^= T[idx]; lo ^= T[idx + 1];
 
         out[2 * r] = hi;
         out[2 * r + 1] = lo;
@@ -58,17 +57,16 @@ const LPS = (x: TArg<Uint32Array>, out: TArg<Uint32Array>, t: TArg<Uint32Array>)
 
 // h will be mutated
 const G = (h: TArg<Uint32Array>, n: TArg<Uint32Array> | null, m: TArg<Uint32Array>) => {
-    const t = T();
     if (n) for (let i = 0; i < 16; i++) X[i] = n[i] ^ h[i];
     else X.set(h);
-    LPS(X, K, t);
+    LPS(X, K);
 
     for (let i = 0; i < 16; i++) S[i] = K[i] ^ m[i];
     for (let r = 0; r < 12; r++) {
         const off = r << 4;
         for (let i = 0; i < 16; i++) X[i] = K[i] ^ C[off + i];
-        LPS(X, K, t);
-        LPS(S, Y, t);
+        LPS(X, K);
+        LPS(S, Y);
         for (let i = 0; i < 16; i++) S[i] = Y[i] ^ K[i];
     }
     for (let i = 0; i < 16; i++) h[i] ^= S[i] ^ m[i];
