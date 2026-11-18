@@ -2,7 +2,7 @@
  * Implementation of GOST R 34.11-94 ([RFC 5831](https://datatracker.ietf.org/doc/html/rfc5831.html)) hash function
  * @module
  */
-import { abytes, aexists, aoutput, clean, createHasher, type TArg } from "@noble/hashes/utils.js";
+import { abytes, aexists, aoutput, clean, createHasher, type CHash, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { HashMD } from "@noble/hashes/_md.js";
 import { MagmaLegacy } from "../magma/index.js";
 import { GOSTR_3411_94_CRYPTOPRO_PARAM_SET } from "../magma/const.js";
@@ -173,4 +173,4 @@ export class _Gost341194 extends HashMD<_Gost341194> {
  * gost341194.create().update(new Uint8Array([97, 98, 99])).digest();
  * ```
  */
-export const gost341194 = /* @__PURE__ */ createHasher(() => new _Gost341194());
+export const gost341194: TRet<CHash<_Gost341194>> = /* @__PURE__ */ createHasher(() => new _Gost341194());

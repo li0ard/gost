@@ -147,7 +147,7 @@ export type ECDSA = {
 }
 
 /** Callable HMAC function type */
-export type CHmac<T extends Hash<T>> = {
+export type CHmac<T extends Hash<T> = Hash<any>> = {
     (key: TArg<Uint8Array>, msg: TArg<Uint8Array>): TRet<Uint8Array>;
     readonly outputLen: number;
     readonly blockLen: number;

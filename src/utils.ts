@@ -1,6 +1,6 @@
 import { abytes, anumber, type TArg, type TRet } from "@noble/hashes/utils.js";
 
-export const _2_32 = 0x100000000,
+export const _2_32 = Math.pow(2, 32),
     _0 = /* @__PURE__ */ Uint8Array.of(0),
     _1 = /* @__PURE__ */ Uint8Array.of(1),
     _NULL = /* @__PURE__ */ Uint8Array.of();
