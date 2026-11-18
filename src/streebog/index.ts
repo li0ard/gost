@@ -2,7 +2,7 @@
  * Implementation of GOST R 34.11-2012 ([RFC 6986](https://datatracker.ietf.org/doc/html/rfc6986.html)) "Streebog" hash function
  * @module
  */
-import { aexists, aoutput, clean, createHasher, createView, type TArg, type TRet } from "@noble/hashes/utils.js";
+import { aexists, aoutput, clean, createHasher, createView, type CHash, type TArg, type TRet } from "@noble/hashes/utils.js";
 import { A, C } from "./const.js";
 import { PI } from "../kuznyechik/const.js";
 import { HashMD } from "@noble/hashes/_md.js";
@@ -36,22 +36,23 @@ const K = new Uint32Array(16),
     M = new Uint32Array(16);
 
 const LPS = (x: TArg<Uint32Array>, out: TArg<Uint32Array>) => {
-    for (let r = 0; r < 8; r++) {
-        const sh = 24 - ((r & 3) << 3),
-            o = r >> 2;
-        let hi = 0, lo = 0, idx: number;
+    for (let o = 0; o < 2; o++) {
+        const x0 = x[o], x1 = x[2 + o], x2 = x[4 + o], x3 = x[6 + o],
+            x4 = x[8 + o], x5 = x[10 + o], x6 = x[12 + o], x7 = x[14 + o];
 
-        idx = ((0 << 8) | ((x[0 + o] >>> sh) & 0xff)) << 1; hi ^= T[idx]; lo ^= T[idx + 1];
-        idx = ((1 << 8) | ((x[2 + o] >>> sh) & 0xff)) << 1; hi ^= T[idx]; lo ^= T[idx + 1];
-        idx = ((2 << 8) | ((x[4 + o] >>> sh) & 0xff)) << 1; hi ^= T[idx]; lo ^= T[idx + 1];
-        idx = ((3 << 8) | ((x[6 + o] >>> sh) & 0xff)) << 1; hi ^= T[idx]; lo ^= T[idx + 1];
-        idx = ((4 << 8) | ((x[8 + o] >>> sh) & 0xff)) << 1; hi ^= T[idx]; lo ^= T[idx + 1];
-        idx = ((5 << 8) | ((x[10 + o] >>> sh) & 0xff)) << 1; hi ^= T[idx]; lo ^= T[idx + 1];
-        idx = ((6 << 8) | ((x[12 + o] >>> sh) & 0xff)) << 1; hi ^= T[idx]; lo ^= T[idx + 1];
-        idx = ((7 << 8) | ((x[14 + o] >>> sh) & 0xff)) << 1; hi ^= T[idx]; lo ^= T[idx + 1];
+        for (let sh = 24, r = o << 2; sh >= 0; sh -= 8, r++) {
+            let idx = ((0 << 8) | ((x0 >>> sh) & 0xff)) << 1; let hi = T[idx], lo = T[idx + 1];
+            idx = ((1 << 8) | ((x1 >>> sh) & 0xff)) << 1; hi ^= T[idx]; lo ^= T[idx + 1];
+            idx = ((2 << 8) | ((x2 >>> sh) & 0xff)) << 1; hi ^= T[idx]; lo ^= T[idx + 1];
+            idx = ((3 << 8) | ((x3 >>> sh) & 0xff)) << 1; hi ^= T[idx]; lo ^= T[idx + 1];
+            idx = ((4 << 8) | ((x4 >>> sh) & 0xff)) << 1; hi ^= T[idx]; lo ^= T[idx + 1];
+            idx = ((5 << 8) | ((x5 >>> sh) & 0xff)) << 1; hi ^= T[idx]; lo ^= T[idx + 1];
+            idx = ((6 << 8) | ((x6 >>> sh) & 0xff)) << 1; hi ^= T[idx]; lo ^= T[idx + 1];
+            idx = ((7 << 8) | ((x7 >>> sh) & 0xff)) << 1; hi ^= T[idx]; lo ^= T[idx + 1];
 
-        out[2 * r] = hi;
-        out[2 * r + 1] = lo;
+            out[2 * r] = hi;
+            out[2 * r + 1] = lo;
+        }
     }
 }
 
@@ -92,12 +93,12 @@ const addNum = (dst: TArg<Uint32Array>, x: number) => {
     }
 }
 
-const loadBlock = (v: DataView, off: number, out: TArg<Uint32Array>) => {
-    for (let i = 0; i < 16; i++) out[i] = v.getUint32(off + ((15 - i) << 2), true);
+const loadBlock = (v: DataView, off: number = 0) => {
+    for (let i = 0; i < 16; i++) M[i] = v.getUint32(off + ((15 - i) << 2), true);
 }
 
 /** Streebog (GOST R 34.11-2012) hash function */
-abstract class Streebog<T extends Streebog<T>> extends HashMD<T> {
+class Streebog<T extends Streebog<T>> extends HashMD<T> {
     protected hash = new Uint32Array(16);
     protected n = new Uint32Array(16);
     protected sigma = new Uint32Array(16);
@@ -108,7 +109,7 @@ abstract class Streebog<T extends Streebog<T>> extends HashMD<T> {
     }
 
     protected process(view: DataView, off: number) {
-        loadBlock(view, off, M);
+        loadBlock(view, off);
         G(this.hash, this.n, M);
         addNum(this.n, 512);
         add512(this.sigma, M);
@@ -129,7 +130,7 @@ abstract class Streebog<T extends Streebog<T>> extends HashMD<T> {
         this.buffer.fill(0, this.pos);
         this.buffer[this.pos] = 1;
 
-        loadBlock(this.view, 0, M);
+        loadBlock(this.view);
         G(this.hash, this.n, M);
         addNum(this.n, this.pos * 8);
         add512(this.sigma, M);
@@ -147,7 +148,8 @@ abstract class Streebog<T extends Streebog<T>> extends HashMD<T> {
         clean(this.buffer, this.hash, this.n, this.sigma);
     }
 
-    protected _copyState(to: T): T {
+    _cloneInto(to?: T): T {
+        to ||= new (this.constructor as any)() as T;
         this._cloneIntoMeta(to);
         to.hash.set(this.hash);
         to.n.set(this.n);
@@ -159,22 +161,12 @@ abstract class Streebog<T extends Streebog<T>> extends HashMD<T> {
 
 /** Internal Streebog-256 hash class*/
 export class _Streebog256 extends Streebog<_Streebog256> {
-    /** Streebog-256 (GOST R 34.11-2012) hash function */
     constructor() { super(false); }
-
-    _cloneInto(to?: _Streebog256): _Streebog256 {
-        return this._copyState(to ||= new _Streebog256());
-    }
 }
 
 /** Internal Streebog-512 hash class*/
 export class _Streebog512 extends Streebog<_Streebog512> {
-    /** Streebog-512 (GOST R 34.11-2012) hash function */
     constructor() { super(true); }
-
-    _cloneInto(to?: _Streebog512): _Streebog512 {
-        return this._copyState(to ||= new _Streebog512());
-    }
 }
 
 /**
@@ -190,10 +182,10 @@ export class _Streebog512 extends Streebog<_Streebog512> {
  * streebog256.create().update(new Uint8Array([97, 98, 99])).digest();
  * ```
  */
-export const streebog256 = /* @__PURE__ */ createHasher(
+export const streebog256: TRet<CHash<_Streebog256>> = /* @__PURE__ */ createHasher(
     () => new _Streebog256(),
     {
-        oid: /* @__PURE__ */ Uint8Array.from([0x06, 0x08, 0x2A, 0x85, 0x03, 0x07, 0x01, 0x01, 0x02, 0x02])
+        oid: /* @__PURE__ */ Uint8Array.of(0x06, 0x08, 0x2A, 0x85, 0x03, 0x07, 0x01, 0x01, 0x02, 0x02)
     }
 );
 /**
@@ -209,9 +201,9 @@ export const streebog256 = /* @__PURE__ */ createHasher(
  * streebog512.create().update(new Uint8Array([97, 98, 99])).digest();
  * ```
  */
-export const streebog512 = /* @__PURE__ */ createHasher(
+export const streebog512: TRet<CHash<_Streebog512>> = /* @__PURE__ */ createHasher(
     () => new _Streebog512(),
     {
-        oid: /* @__PURE__ */ Uint8Array.from([0x06, 0x08, 0x2A, 0x85, 0x03, 0x07, 0x01, 0x01, 0x02, 0x03])
+        oid: /* @__PURE__ */ Uint8Array.of(0x06, 0x08, 0x2A, 0x85, 0x03, 0x07, 0x01, 0x01, 0x02, 0x03)
     }
 );
